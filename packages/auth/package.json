@@ -1,0 +1,24 @@
+{
+  "name": "@valsea/auth",
+  "type": "module",
+  "exports": {
+    ".": {
+      "default": "./src/index.ts"
+    },
+    "./*": {
+      "default": "./src/*.ts"
+    }
+  },
+  "scripts": {},
+  "dependencies": {
+    "@valsea/db": "workspace:*",
+    "@valsea/env": "workspace:*",
+    "better-auth": "catalog:",
+    "dotenv": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@valsea/config": "workspace:*",
+    "typescript": "catalog:"
+  }
+}
