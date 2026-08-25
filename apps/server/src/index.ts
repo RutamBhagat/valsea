@@ -1,9 +1,25 @@
 import { cors } from "@elysiajs/cors";
+import { openapi } from "@elysiajs/openapi";
 import { auth } from "@valsea/auth";
 import { env } from "@valsea/env/server";
-import { Elysia } from "elysia";
+import { Elysia, t } from "elysia";
 
 new Elysia()
+  .use(
+    openapi({
+      path: "/openapi",
+      specPath: "/openapi/json",
+      documentation: {
+        info: {
+          title: "VALSEA Transcription API",
+          version: "1.0.0",
+        },
+      },
+      exclude: {
+        methods: ["options"],
+      },
+    }),
+  )
   .use(
     cors({
       origin: env.CORS_ORIGIN,
@@ -19,7 +35,13 @@ new Elysia()
     }
     return status(405);
   })
-  .get("/", () => "OK")
+  .get("/", () => "OK" as const, {
+    detail: {
+      summary: "Check server health",
+      tags: ["Health"],
+    },
+    response: t.Literal("OK"),
+  })
   .listen(3000, () => {
     console.log("Server is running on http://localhost:3000");
   });

@@ -11,13 +11,15 @@
   },
   "dependencies": {
     "@elysiajs/cors": "^1.4.2",
+    "@elysiajs/openapi": "^1.4.15",
     "@sinclair/typebox": "^0.34.52",
     "@valsea/auth": "workspace:*",
     "@valsea/db": "workspace:*",
     "@valsea/env": "workspace:*",
     "better-auth": "catalog:",
     "dotenv": "catalog:",
-    "elysia": "^1.4.29"
+    "elysia": "^1.4.29",
+    "openai": "^7.5.0"
   },
   "devDependencies": {
     "@types/bun": "catalog:",
