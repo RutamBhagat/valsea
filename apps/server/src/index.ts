@@ -6,6 +6,7 @@ import { Elysia, t } from "elysia";
 
 import { ensureLocalGcpResources } from "./lib/gcp";
 import { apiRoutes } from "./routes/api";
+import { taskRoutes } from "./routes/tasks";
 
 await ensureLocalGcpResources();
 
@@ -41,6 +42,7 @@ new Elysia()
     return status(405);
   })
   .use(apiRoutes)
+  .use(taskRoutes)
   .get("/", () => "OK" as const, {
     detail: {
       summary: "Check server health",
