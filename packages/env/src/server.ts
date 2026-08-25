@@ -18,18 +18,13 @@ export const env = createEnv({
     GCP_REGION: v.optional(nonEmptyString, "us-west1"),
     GCS_AUDIO_BUCKET: v.optional(nonEmptyString, "valsea-audio-local"),
     CLOUD_TASKS_QUEUE: v.optional(nonEmptyString, "valsea-transcriptions"),
-    WORKER_URL: v.optional(
-      v.pipe(v.string(), v.url()),
-      "http://localhost:3000",
+    TASK_INVOKER_SERVICE_ACCOUNT_EMAIL: v.optional(
+      nonEmptyString,
+      "valsea-task-invoker@floci-local.iam.gserviceaccount.com",
     ),
-    FLOCI_GCP_ENDPOINT: v.optional(
-      v.pipe(v.string(), v.url()),
-      "http://localhost:4588",
-    ),
-    NODE_ENV: v.optional(
-      v.picklist(["development", "production", "test"]),
-      "development",
-    ),
+    WORKER_URL: v.optional(v.pipe(v.string(), v.url()), "http://localhost:3000"),
+    FLOCI_GCP_ENDPOINT: v.optional(v.pipe(v.string(), v.url()), "http://localhost:4588"),
+    NODE_ENV: v.optional(v.picklist(["development", "production", "test"]), "development"),
   },
   runtimeEnv: process.env,
   skipValidation: !!process.env.SKIP_ENV_VALIDATION,
@@ -41,6 +36,7 @@ const pulumiInjectedEnv = [
   "GCP_REGION",
   "GCS_AUDIO_BUCKET",
   "CLOUD_TASKS_QUEUE",
+  "TASK_INVOKER_SERVICE_ACCOUNT_EMAIL",
   "WORKER_URL",
 ] as const;
 

@@ -60,6 +60,10 @@ export const comparisonRoutes = new Elysia().post(
           url: targetUrl,
           headers: { "Content-Type": "application/json" },
           body: payload,
+          oidcToken: {
+            serviceAccountEmail: env.TASK_INVOKER_SERVICE_ACCOUNT_EMAIL,
+            audience: env.WORKER_URL,
+          },
         },
       },
     });

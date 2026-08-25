@@ -47,6 +47,25 @@ const taskInvoker = new gcp.serviceaccount.Account("task-invoker", {
   displayName: "VALSEA Cloud Tasks invoker",
 });
 
+const apiServiceAccount = new gcp.serviceaccount.Account("api-service", {
+  accountId: "valsea-api",
+  displayName: "VALSEA API service",
+});
+
+new gcp.cloudtasks.QueueIamMember("api-task-enqueuer", {
+  project,
+  location: region,
+  name: transcriptionQueue.name,
+  role: "roles/cloudtasks.enqueuer",
+  member: pulumi.interpolate`serviceAccount:${apiServiceAccount.email}`,
+});
+
+new gcp.serviceaccount.IAMMember("api-task-invoker-user", {
+  serviceAccountId: taskInvoker.name,
+  role: "roles/iam.serviceAccountUser",
+  member: pulumi.interpolate`serviceAccount:${apiServiceAccount.email}`,
+});
+
 const workerService = new gcp.cloudrunv2.Service("worker", {
   name: "valsea-worker",
   location: region,
@@ -69,6 +88,7 @@ const apiService = new gcp.cloudrunv2.Service("api", {
   ingress: "INGRESS_TRAFFIC_ALL",
   invokerIamDisabled: true,
   template: {
+    serviceAccount: apiServiceAccount.email,
     containers: [
       {
         image: backendImage,
@@ -78,6 +98,7 @@ const apiService = new gcp.cloudrunv2.Service("api", {
           { name: "GCP_REGION", value: region },
           { name: "GCS_AUDIO_BUCKET", value: audioBucket.name },
           { name: "CLOUD_TASKS_QUEUE", value: transcriptionQueue.name },
+          { name: "TASK_INVOKER_SERVICE_ACCOUNT_EMAIL", value: taskInvoker.email },
           { name: "WORKER_URL", value: workerService.uri },
         ],
       },
