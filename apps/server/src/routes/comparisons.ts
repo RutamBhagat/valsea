@@ -1,5 +1,5 @@
 import { protos } from "@google-cloud/tasks";
-import { db } from "@valsea/db";
+import { db, eq } from "@valsea/db";
 import { audio, comparisonRun, providerRun } from "@valsea/db/schema/index";
 import { env } from "@valsea/env/server";
 import { Elysia, t } from "elysia";
@@ -74,6 +74,52 @@ export const comparisonRoutes = new Elysia().post(
     body: t.Object({ audio: t.File({ type: supportedAudioTypes }) }),
     detail: {
       summary: "Create a VALSEA transcription comparison",
+      tags: ["Comparisons"],
+    },
+  },
+).get(
+  "/comparisons/:id",
+  async ({ params: { id }, status }) => {
+    const [comparison] = await db
+      .select({
+        id: comparisonRun.id,
+        createdAt: comparisonRun.createdAt,
+        audio: {
+          id: audio.id,
+          filename: audio.filename,
+          contentType: audio.contentType,
+          sizeBytes: audio.sizeBytes,
+        },
+      })
+      .from(comparisonRun)
+      .innerJoin(audio, eq(comparisonRun.audioId, audio.id))
+      .where(eq(comparisonRun.id, id))
+      .limit(1);
+
+    if (!comparison) {
+      return status(404, { error: "Comparison not found" });
+    }
+
+    const providerRuns = await db
+      .select({
+        id: providerRun.id,
+        provider: providerRun.provider,
+        status: providerRun.status,
+        transcript: providerRun.transcript,
+        latencyMs: providerRun.latencyMs,
+        error: providerRun.error,
+        startedAt: providerRun.startedAt,
+        completedAt: providerRun.completedAt,
+      })
+      .from(providerRun)
+      .where(eq(providerRun.comparisonRunId, id));
+
+    return { ...comparison, providerRuns };
+  },
+  {
+    params: t.Object({ id: t.String({ format: "uuid" }) }),
+    detail: {
+      summary: "Get a transcription comparison",
       tags: ["Comparisons"],
     },
   },
