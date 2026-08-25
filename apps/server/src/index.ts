@@ -1,16 +1,6 @@
-import { devToolsMiddleware } from "@ai-sdk/devtools";
-import { google } from "@ai-sdk/google";
 import { cors } from "@elysiajs/cors";
 import { auth } from "@valsea/auth";
 import { env } from "@valsea/env/server";
-import {
-  convertToModelMessages,
-  createUIMessageStreamResponse,
-  streamText,
-  toUIMessageStream,
-  type UIMessage,
-  wrapLanguageModel,
-} from "ai";
 import { Elysia } from "elysia";
 
 new Elysia()
@@ -28,22 +18,6 @@ new Elysia()
       return auth.handler(request);
     }
     return status(405);
-  })
-  .post("/ai", async (context) => {
-    const body = (await context.request.json()) as { messages?: UIMessage[] };
-    const uiMessages = body.messages || [];
-    const model = wrapLanguageModel({
-      model: google("gemini-2.5-flash"),
-      middleware: devToolsMiddleware(),
-    });
-    const result = streamText({
-      model,
-      messages: await convertToModelMessages(uiMessages),
-    });
-
-    return createUIMessageStreamResponse({
-      stream: toUIMessageStream({ stream: result.stream }),
-    });
   })
   .get("/", () => "OK")
   .listen(3000, () => {

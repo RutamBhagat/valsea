@@ -14,8 +14,7 @@
     "@valsea/db": "workspace:*",
     "@valsea/env": "workspace:*",
     "better-auth": "catalog:",
-    "dotenv": "catalog:",
-    "zod": "catalog:"
+    "dotenv": "catalog:"
   },
   "devDependencies": {
     "@valsea/config": "workspace:*",

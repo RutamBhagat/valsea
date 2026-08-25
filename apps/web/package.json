@@ -8,7 +8,6 @@
     "dev:bare": "vp dev"
   },
   "dependencies": {
-    "@ai-sdk/react": "^4.0.44",
     "@tailwindcss/vite": "^4.3.3",
     "@tanstack/react-form": "^1.33.2",
     "@tanstack/react-query": "^5.101.4",
@@ -16,7 +15,6 @@
     "@tanstack/react-start": "^1.168.32",
     "@valsea/env": "workspace:*",
     "@valsea/ui": "workspace:*",
-    "ai": "catalog:",
     "better-auth": "catalog:",
     "dotenv": "catalog:",
     "lucide-react": "catalog:",
@@ -24,9 +22,7 @@
     "react": "catalog:",
     "react-dom": "catalog:",
     "sonner": "catalog:",
-    "streamdown": "^2.5.0",
-    "tailwindcss": "catalog:",
-    "zod": "catalog:"
+    "tailwindcss": "catalog:"
   },
   "devDependencies": {
     "@tanstack/react-router-devtools": "^1.167.0",

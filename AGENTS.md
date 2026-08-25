@@ -1,1 +1,1 @@
-- mention tradeoffs in TRADEOFFS.md file at the root of the repository
+- mention tradeoffs in TRADEOFFS.md file at the root of the repository, only if there are any actual tradeoffs

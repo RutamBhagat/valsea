@@ -12,16 +12,15 @@
   "scripts": {
     "db:push": "drizzle-kit push",
     "db:generate": "drizzle-kit generate",
-    "db:migrate:deploy": "drizzle-kit migrate",
+    "db:migrate:deploy": "bunx --bun drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
-    "db:migrate": "drizzle-kit migrate"
+    "db:migrate": "bunx --bun drizzle-kit migrate"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.1.0",
     "@valsea/env": "workspace:*",
     "dotenv": "catalog:",
-    "drizzle-orm": "^0.45.2",
-    "zod": "catalog:"
+    "drizzle-orm": "^0.45.2"
   },
   "devDependencies": {
     "@valsea/config": "workspace:*",

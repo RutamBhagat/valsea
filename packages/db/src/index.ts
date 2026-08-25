@@ -6,7 +6,7 @@ import * as schema from "./schema";
 
 export function createDb() {
   const sql = neon(env.DATABASE_URL);
-  return drizzle(sql, { schema });
+  return drizzle(sql, { schema, casing: "snake_case" });
 }
 
 export const db = createDb();
