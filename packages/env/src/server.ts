@@ -31,14 +31,7 @@ export const env = createEnv({
   emptyStringAsUndefined: true,
 });
 
-const pulumiInjectedEnv = [
-  "GCP_PROJECT_ID",
-  "GCP_REGION",
-  "GCS_AUDIO_BUCKET",
-  "CLOUD_TASKS_QUEUE",
-  "TASK_INVOKER_SERVICE_ACCOUNT_EMAIL",
-  "WORKER_URL",
-] as const;
+const pulumiInjectedEnv = ["GCP_PROJECT_ID", "GCP_REGION", "GCS_AUDIO_BUCKET"] as const;
 
 if (env.NODE_ENV === "production") {
   for (const key of pulumiInjectedEnv) {
