@@ -1,0 +1,1 @@
+- mention tradeoffs in TRADEOFFS.md file at the root of the repository
