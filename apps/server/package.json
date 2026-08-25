@@ -12,6 +12,9 @@
   "dependencies": {
     "@elysiajs/cors": "^1.4.2",
     "@elysiajs/openapi": "^1.4.15",
+    "@google-cloud/storage": "^8.0.1",
+    "@google-cloud/tasks": "^7.0.0",
+    "@grpc/grpc-js": "^1.14.4",
     "@sinclair/typebox": "^0.34.52",
     "@valsea/auth": "workspace:*",
     "@valsea/db": "workspace:*",

@@ -47,6 +47,21 @@ const taskInvoker = new gcp.serviceaccount.Account("task-invoker", {
   displayName: "VALSEA Cloud Tasks invoker",
 });
 
+const workerService = new gcp.cloudrunv2.Service("worker", {
+  name: "valsea-worker",
+  location: region,
+  deletionProtection: false,
+  ingress: "INGRESS_TRAFFIC_ALL",
+  template: {
+    containers: [
+      {
+        image: backendImage,
+        ports: { containerPort: 3000 },
+      },
+    ],
+  },
+});
+
 const apiService = new gcp.cloudrunv2.Service("api", {
   name: "valsea-api",
   location: region,
@@ -58,21 +73,13 @@ const apiService = new gcp.cloudrunv2.Service("api", {
       {
         image: backendImage,
         ports: { containerPort: 3000 },
-      },
-    ],
-  },
-});
-
-const workerService = new gcp.cloudrunv2.Service("worker", {
-  name: "valsea-worker",
-  location: region,
-  deletionProtection: false,
-  ingress: "INGRESS_TRAFFIC_ALL",
-  template: {
-    containers: [
-      {
-        image: backendImage,
-        ports: { containerPort: 3000 },
+        envs: [
+          { name: "GCP_PROJECT_ID", value: project },
+          { name: "GCP_REGION", value: region },
+          { name: "GCS_AUDIO_BUCKET", value: audioBucket.name },
+          { name: "CLOUD_TASKS_QUEUE", value: transcriptionQueue.name },
+          { name: "WORKER_URL", value: workerService.uri },
+        ],
       },
     ],
   },

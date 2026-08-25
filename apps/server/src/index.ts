@@ -4,6 +4,11 @@ import { auth } from "@valsea/auth";
 import { env } from "@valsea/env/server";
 import { Elysia, t } from "elysia";
 
+import { ensureLocalGcpResources } from "./lib/gcp";
+import { apiRoutes } from "./routes/api";
+
+await ensureLocalGcpResources();
+
 new Elysia()
   .use(
     openapi({
@@ -35,6 +40,7 @@ new Elysia()
     }
     return status(405);
   })
+  .use(apiRoutes)
   .get("/", () => "OK" as const, {
     detail: {
       summary: "Check server health",

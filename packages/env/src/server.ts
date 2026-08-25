@@ -14,9 +14,40 @@ export const env = createEnv({
     GOOGLE_CLIENT_ID: nonEmptyString,
     GOOGLE_CLIENT_SECRET: nonEmptyString,
     VALSEA_API_KEY: nonEmptyString,
-    NODE_ENV: v.optional(v.picklist(["development", "production", "test"]), "development"),
+    GCP_PROJECT_ID: v.optional(nonEmptyString, "floci-local"),
+    GCP_REGION: v.optional(nonEmptyString, "us-west1"),
+    GCS_AUDIO_BUCKET: v.optional(nonEmptyString, "valsea-audio-local"),
+    CLOUD_TASKS_QUEUE: v.optional(nonEmptyString, "valsea-transcriptions"),
+    WORKER_URL: v.optional(
+      v.pipe(v.string(), v.url()),
+      "http://localhost:3000",
+    ),
+    FLOCI_GCP_ENDPOINT: v.optional(
+      v.pipe(v.string(), v.url()),
+      "http://localhost:4588",
+    ),
+    NODE_ENV: v.optional(
+      v.picklist(["development", "production", "test"]),
+      "development",
+    ),
   },
   runtimeEnv: process.env,
   skipValidation: !!process.env.SKIP_ENV_VALIDATION,
   emptyStringAsUndefined: true,
 });
+
+const pulumiInjectedEnv = [
+  "GCP_PROJECT_ID",
+  "GCP_REGION",
+  "GCS_AUDIO_BUCKET",
+  "CLOUD_TASKS_QUEUE",
+  "WORKER_URL",
+] as const;
+
+if (env.NODE_ENV === "production") {
+  for (const key of pulumiInjectedEnv) {
+    if (!process.env[key]) {
+      throw new Error(`${key} must be injected by Pulumi in production`);
+    }
+  }
+}
