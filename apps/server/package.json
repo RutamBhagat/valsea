@@ -1,7 +1,10 @@
 {
-  "name": "server",
+  "name": "@valsea/server",
   "type": "module",
   "main": "src/index.ts",
+  "exports": {
+    "./app": "./src/app.ts"
+  },
   "scripts": {
     "build": "tsdown",
     "check-types": "tsc -b",

@@ -1,1 +1,8 @@
 @import "@valsea/ui/globals.css";
+
+@theme {
+  --font-sans: "Geist Variable", sans-serif;
+  --font-mono: "Geist Mono Variable", monospace;
+  --color-brand-panel: #171717;
+  --color-brand-panel-foreground: #f5f5f5;
+}

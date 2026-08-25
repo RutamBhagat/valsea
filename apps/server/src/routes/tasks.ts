@@ -25,7 +25,10 @@ export const taskRoutes = new Elysia({ prefix: "/internal/tasks" }).post(
       .limit(1);
 
     if (!run) {
-      return status(404, { error: "Provider run not found" });
+      return status(404, {
+        type: "provider_run_not_found",
+        message: "Provider run not found",
+      });
     }
 
     if (run.status === "succeeded" || run.status === "failed") {
@@ -39,7 +42,10 @@ export const taskRoutes = new Elysia({ prefix: "/internal/tasks" }).post(
       .returning({ id: providerRun.id });
 
     if (!claimed) {
-      return status(409, { error: "Provider run is not queued" });
+      return status(409, {
+        type: "provider_run_not_queued",
+        message: "Provider run is not queued",
+      });
     }
 
     let latencyMs: number | null = null;

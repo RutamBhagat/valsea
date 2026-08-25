@@ -9,7 +9,7 @@ export const apiRoutes = new Elysia({ prefix: "/api" }).guard(
       const session = await auth.api.getSession({ headers: request.headers });
 
       if (!session) {
-        return status(401, { error: "Unauthorized" });
+        return status(401, { type: "unauthorized", message: "Unauthorized" });
       }
     },
   },

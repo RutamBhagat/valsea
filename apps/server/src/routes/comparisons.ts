@@ -97,7 +97,10 @@ export const comparisonRoutes = new Elysia().post(
       .limit(1);
 
     if (!comparison) {
-      return status(404, { error: "Comparison not found" });
+      return status(404, {
+        type: "comparison_not_found",
+        message: "Comparison not found",
+      });
     }
 
     const providerRuns = await db

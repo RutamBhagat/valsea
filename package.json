@@ -35,7 +35,7 @@
     "dev:cloud": "floci gcp status -o json | grep -Eq '\"state\"[[:space:]]*:[[:space:]]*\"running\"' || floci gcp start",
     "dev:cloud:stop": "floci gcp stop",
     "dev:web": "vp run --filter web dev:bare",
-    "dev:server": "bun run dev:cloud && vp run --filter server dev",
+    "dev:server": "bun run dev:cloud && vp run --filter @valsea/server dev",
     "db:push": "vp run --filter @valsea/db db:push",
     "db:studio": "vp run --filter @valsea/db db:studio",
     "db:generate": "vp run --filter @valsea/db db:generate",

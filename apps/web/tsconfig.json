@@ -21,6 +21,7 @@
     "noUncheckedSideEffectImports": true,
     "paths": {
       "@/*": ["./src/*"],
+      "@valsea/server/*": ["../server/src/*"],
       "@valsea/ui/*": ["../../packages/ui/src/*"]
     }
   }

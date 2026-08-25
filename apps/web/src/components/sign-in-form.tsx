@@ -2,6 +2,7 @@ import { Button } from "@valsea/ui/components/button";
 import { useState } from "react";
 import { toast } from "sonner";
 
+import { Google } from "@/components/logo/google-logo";
 import { authClient } from "@/lib/auth-client";
 
 import Loader from "./loader";
@@ -15,7 +16,7 @@ export default function SignInForm() {
 
     const { error } = await authClient.signIn.social({
       provider: "google",
-      callbackURL: "/dashboard",
+      callbackURL: new URL("/", window.location.origin).toString(),
     });
 
     if (error) {
@@ -29,13 +30,24 @@ export default function SignInForm() {
   }
 
   return (
-    <div className="mx-auto mt-10 w-full max-w-md p-6">
-      <h1 className="mb-2 text-center text-3xl font-bold">Sign In</h1>
-      <p className="mb-6 text-center text-sm text-muted-foreground">
-        Use your Google account to continue.
-      </p>
-      <Button className="w-full" onClick={signInWithGoogle} disabled={isSigningIn}>
-        {isSigningIn ? "Redirecting..." : "Continue with Google"}
+    <div className="flex flex-col gap-6">
+      <div className="flex flex-col items-center gap-1 text-center">
+        <h1 className="text-[26px] font-bold tracking-tight">Sign in to valsea</h1>
+        <p className="text-balance text-[15px] text-muted-foreground">
+          Continue with Google to open your transcription workspace.
+        </p>
+      </div>
+
+      <Button
+        type="button"
+        variant="outline"
+        className="w-full"
+        disabled={isSigningIn}
+        aria-busy={isSigningIn}
+        onClick={signInWithGoogle}
+      >
+        <Google aria-hidden="true" data-icon="inline-start" />
+        {isSigningIn ? "Redirecting…" : "Continue with Google"}
       </Button>
     </div>
   );
