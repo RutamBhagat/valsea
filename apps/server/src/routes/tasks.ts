@@ -13,6 +13,7 @@ export const taskRoutes = new Elysia({ prefix: "/internal/tasks" }).post(
       .select({
         id: providerRun.id,
         provider: providerRun.provider,
+        status: providerRun.status,
         objectKey: audio.objectKey,
         filename: audio.filename,
         contentType: audio.contentType,
@@ -25,6 +26,10 @@ export const taskRoutes = new Elysia({ prefix: "/internal/tasks" }).post(
 
     if (!run) {
       return status(404, { error: "Provider run not found" });
+    }
+
+    if (run.status === "succeeded" || run.status === "failed") {
+      return { status: run.status };
     }
 
     const [claimed] = await db
