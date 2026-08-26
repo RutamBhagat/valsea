@@ -1,0 +1,3 @@
+class Qwen3ASRModel:
+    @classmethod
+    def from_pretrained(cls, model_id: str, **kwargs: object) -> object: ...
