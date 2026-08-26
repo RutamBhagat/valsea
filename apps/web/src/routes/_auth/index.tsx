@@ -31,6 +31,7 @@ const supportedAudioTypes = [
 
 const providerDetails = [
   { id: "valsea", name: "VALSEA", model: "valsea-transcribe" },
+  { id: "qwen", name: "Qwen", model: "Qwen3-ASR-1.7B / Modal" },
   { id: "whisper", name: "Whisper", model: "whisper-large-v3-turbo" },
 ] as const;
 
@@ -126,11 +127,11 @@ function HomeComponent() {
             Speech transcription comparison
           </p>
           <h1 className="text-3xl font-semibold tracking-tight md:text-4xl">
-            Compare VALSEA and Whisper on the same audio
+            Compare VALSEA, Qwen, and Whisper on the same audio
           </h1>
           <p className="text-sm leading-6 text-muted-foreground">
             Upload one supported audio file. Each provider runs independently, and this page follows
-            both results until they finish.
+            all three results until they finish.
           </p>
         </header>
 
@@ -166,7 +167,7 @@ function HomeComponent() {
               </CardContent>
               <CardFooter>
                 <Button type="submit" disabled={!audioFile || isSubmitting}>
-                  {isSubmitting ? "Starting…" : "Compare VALSEA and Whisper"}
+                  {isSubmitting ? "Starting…" : "Compare all three providers"}
                 </Button>
               </CardFooter>
             </Card>

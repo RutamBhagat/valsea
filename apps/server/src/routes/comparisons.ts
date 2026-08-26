@@ -14,98 +14,100 @@ const supportedAudioTypes = [
   "video/webm",
 ];
 
-export const comparisonRoutes = new Elysia().post(
-  "/comparisons",
-  async ({ body: { audio: uploadedAudio, providers: selectedProviders } }) => {
-    const audioId = crypto.randomUUID();
-    const comparisonRunId = crypto.randomUUID();
-    const providerRunRows = selectedProviders.map((provider) => ({
-      id: crypto.randomUUID(),
-      comparisonRunId,
-      provider,
-      status: "queued" as const,
-    }));
-    const objectKey = `audio/${audioId}`;
-    const bytes = Buffer.from(await uploadedAudio.arrayBuffer());
+export const comparisonRoutes = new Elysia()
+  .post(
+    "/comparisons",
+    async ({ body: { audio: uploadedAudio, providers: selectedProviders } }) => {
+      const audioId = crypto.randomUUID();
+      const comparisonRunId = crypto.randomUUID();
+      const providerRunRows = selectedProviders.map((provider) => ({
+        id: crypto.randomUUID(),
+        comparisonRunId,
+        provider,
+        status: "queued" as const,
+      }));
+      const objectKey = `audio/${audioId}`;
+      const bytes = Buffer.from(await uploadedAudio.arrayBuffer());
 
-    await uploadAudio(objectKey, bytes, uploadedAudio.type);
+      await uploadAudio(objectKey, bytes, uploadedAudio.type);
 
-    db.transaction((tx) => {
-      tx.insert(audio)
-        .values({
-          id: audioId,
-          objectKey,
-          filename: uploadedAudio.name,
-          contentType: uploadedAudio.type,
-          sizeBytes: uploadedAudio.size,
-        })
-        .run();
-      tx.insert(comparisonRun).values({ id: comparisonRunId, audioId }).run();
-      tx.insert(providerRun).values(providerRunRows).run();
-    });
-
-    return { comparisonRunId };
-  },
-  {
-    body: t.Object({
-      audio: t.File({ type: supportedAudioTypes }),
-      providers: t.Array(
-        t.UnionEnum(["valsea", "whisper"]),
-        { minItems: 2, uniqueItems: true },
-      ),
-    }),
-    detail: {
-      summary: "Create a VALSEA transcription comparison",
-      tags: ["Comparisons"],
-    },
-  },
-).get(
-  "/comparisons/:id",
-  async ({ params: { id }, status }) => {
-    const [comparison] = await db
-      .select({
-        id: comparisonRun.id,
-        createdAt: comparisonRun.createdAt,
-        audio: {
-          id: audio.id,
-          filename: audio.filename,
-          contentType: audio.contentType,
-          sizeBytes: audio.sizeBytes,
-        },
-      })
-      .from(comparisonRun)
-      .innerJoin(audio, eq(comparisonRun.audioId, audio.id))
-      .where(eq(comparisonRun.id, id))
-      .limit(1);
-
-    if (!comparison) {
-      return status(404, {
-        type: "comparison_not_found",
-        message: "Comparison not found",
+      db.transaction((tx) => {
+        tx.insert(audio)
+          .values({
+            id: audioId,
+            objectKey,
+            filename: uploadedAudio.name,
+            contentType: uploadedAudio.type,
+            sizeBytes: uploadedAudio.size,
+          })
+          .run();
+        tx.insert(comparisonRun).values({ id: comparisonRunId, audioId }).run();
+        tx.insert(providerRun).values(providerRunRows).run();
       });
-    }
 
-    const providerRuns = await db
-      .select({
-        id: providerRun.id,
-        provider: providerRun.provider,
-        status: providerRun.status,
-        transcript: providerRun.transcript,
-        latencyMs: providerRun.latencyMs,
-        error: providerRun.error,
-        startedAt: providerRun.startedAt,
-        completedAt: providerRun.completedAt,
-      })
-      .from(providerRun)
-      .where(eq(providerRun.comparisonRunId, id));
-
-    return { ...comparison, providerRuns };
-  },
-  {
-    params: t.Object({ id: t.String({ format: "uuid" }) }),
-    detail: {
-      summary: "Get a transcription comparison",
-      tags: ["Comparisons"],
+      return { comparisonRunId };
     },
-  },
-);
+    {
+      body: t.Object({
+        audio: t.File({ type: supportedAudioTypes }),
+        providers: t.Array(t.UnionEnum(["valsea", "qwen", "whisper"]), {
+          minItems: 2,
+          uniqueItems: true,
+        }),
+      }),
+      detail: {
+        summary: "Create a VALSEA transcription comparison",
+        tags: ["Comparisons"],
+      },
+    },
+  )
+  .get(
+    "/comparisons/:id",
+    async ({ params: { id }, status }) => {
+      const [comparison] = await db
+        .select({
+          id: comparisonRun.id,
+          createdAt: comparisonRun.createdAt,
+          audio: {
+            id: audio.id,
+            filename: audio.filename,
+            contentType: audio.contentType,
+            sizeBytes: audio.sizeBytes,
+          },
+        })
+        .from(comparisonRun)
+        .innerJoin(audio, eq(comparisonRun.audioId, audio.id))
+        .where(eq(comparisonRun.id, id))
+        .limit(1);
+
+      if (!comparison) {
+        return status(404, {
+          type: "comparison_not_found",
+          message: "Comparison not found",
+        });
+      }
+
+      const providerRuns = await db
+        .select({
+          id: providerRun.id,
+          provider: providerRun.provider,
+          status: providerRun.status,
+          transcript: providerRun.transcript,
+          latencyMs: providerRun.latencyMs,
+          error: providerRun.error,
+          startedAt: providerRun.startedAt,
+          completedAt: providerRun.completedAt,
+        })
+        .from(providerRun)
+        .where(eq(providerRun.comparisonRunId, id));
+
+      return { ...comparison, providerRuns };
+    },
+    {
+      params: t.Object({ id: t.String({ format: "uuid" }) }),
+      detail: {
+        summary: "Get a transcription comparison",
+        tags: ["Comparisons"],
+      },
+    },
+  );

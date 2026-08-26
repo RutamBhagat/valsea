@@ -35,7 +35,7 @@ export function useComparison() {
     mutationFn: async (audio: File) => {
       const { data } = await api.api.comparisons.post({
         audio,
-        providers: ["valsea", "whisper"],
+        providers: ["valsea", "qwen", "whisper"],
       });
       if (!data) {
         throw new Error("Comparison creation returned no data");
