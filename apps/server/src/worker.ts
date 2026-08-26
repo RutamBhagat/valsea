@@ -4,6 +4,7 @@ import { Elysia } from "elysia";
 
 import { downloadAudio } from "./lib/r2";
 import { providers } from "./providers";
+import type { ProviderId, TranscriptionProvider } from "./providers/types";
 
 const idlePollMs = 1_000;
 
@@ -22,14 +23,23 @@ function claimNextRun() {
       tx
         .update(providerRun)
         .set({ status: "running", startedAt: new Date(), error: null })
-        .where(and(eq(providerRun.id, next.id), eq(providerRun.status, "queued")))
+        .where(
+          and(eq(providerRun.id, next.id), eq(providerRun.status, "queued")),
+        )
         .returning({ id: providerRun.id })
         .get()?.id ?? null
     );
   });
 }
 
-async function processNextRun() {
+interface WorkerDependencies {
+  downloadAudio?: typeof downloadAudio;
+  providers?: Record<ProviderId, TranscriptionProvider>;
+}
+
+export async function processNextRun(dependencies: WorkerDependencies = {}) {
+  const download = dependencies.downloadAudio ?? downloadAudio;
+  const providerRegistry = dependencies.providers ?? providers;
   const providerRunId = claimNextRun();
   if (!providerRunId) return false;
 
@@ -53,9 +63,9 @@ async function processNextRun() {
   try {
     if (!run) throw new Error(`Provider run ${providerRunId} has no audio`);
 
-    const audioBytes = await downloadAudio(run.objectKey);
+    const audioBytes = await download(run.objectKey);
     providerStartedAt = performance.now();
-    const result = await providers[run.provider].transcribe({
+    const result = await providerRegistry[run.provider].transcribe({
       audio: audioBytes,
       filename: run.filename,
       contentType: run.contentType,
@@ -115,6 +125,14 @@ async function processNextRun() {
   return true;
 }
 
+// needed for test do not inline
+export function recoverInterruptedRuns() {
+  db.update(providerRun)
+    .set({ status: "queued", startedAt: null })
+    .where(eq(providerRun.status, "running"))
+    .run();
+}
+
 let stopped = true;
 let pollTimer: ReturnType<typeof setTimeout> | undefined;
 
@@ -133,10 +151,7 @@ async function poll() {
 export const transcriptionWorker = new Elysia({ name: "transcription-worker" })
   .onStart(() => {
     stopped = false;
-    db.update(providerRun)
-      .set({ status: "queued", startedAt: null })
-      .where(eq(providerRun.status, "running"))
-      .run();
+    recoverInterruptedRuns();
     pollTimer = setTimeout(poll, 0);
   })
   .onStop(() => {

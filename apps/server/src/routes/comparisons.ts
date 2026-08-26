@@ -3,6 +3,7 @@ import { audio, comparisonRun, providerRun } from "@valsea/db/schema/index";
 import { Elysia, t } from "elysia";
 
 import { uploadAudio } from "../lib/r2";
+import type { ProviderId } from "../providers/types";
 
 const supportedAudioTypes = [
   "audio/flac",
@@ -14,38 +15,49 @@ const supportedAudioTypes = [
   "video/webm",
 ];
 
+// function needed for test do not inline
+export async function createComparison(
+  uploadedAudio: File,
+  selectedProviders: ProviderId[],
+  storeAudio: typeof uploadAudio = uploadAudio,
+) {
+  const audioId = crypto.randomUUID();
+  const comparisonRunId = crypto.randomUUID();
+  const providerRunRows = selectedProviders.map((provider) => ({
+    id: crypto.randomUUID(),
+    comparisonRunId,
+    provider,
+    status: "queued" as const,
+  }));
+  const objectKey = `audio/${audioId}`;
+  const bytes = Buffer.from(await uploadedAudio.arrayBuffer());
+
+  await storeAudio(objectKey, bytes, uploadedAudio.type);
+
+  db.transaction((tx) => {
+    tx.insert(audio)
+      .values({
+        id: audioId,
+        objectKey,
+        filename: uploadedAudio.name,
+        contentType: uploadedAudio.type,
+        sizeBytes: uploadedAudio.size,
+      })
+      .run();
+    tx.insert(comparisonRun).values({ id: comparisonRunId, audioId }).run();
+    tx.insert(providerRun).values(providerRunRows).run();
+  });
+
+  return { comparisonRunId };
+}
+
 export const comparisonRoutes = new Elysia()
   .post(
     "/comparisons",
-    async ({ body: { audio: uploadedAudio, providers: selectedProviders } }) => {
-      const audioId = crypto.randomUUID();
-      const comparisonRunId = crypto.randomUUID();
-      const providerRunRows = selectedProviders.map((provider) => ({
-        id: crypto.randomUUID(),
-        comparisonRunId,
-        provider,
-        status: "queued" as const,
-      }));
-      const objectKey = `audio/${audioId}`;
-      const bytes = Buffer.from(await uploadedAudio.arrayBuffer());
-
-      await uploadAudio(objectKey, bytes, uploadedAudio.type);
-
-      db.transaction((tx) => {
-        tx.insert(audio)
-          .values({
-            id: audioId,
-            objectKey,
-            filename: uploadedAudio.name,
-            contentType: uploadedAudio.type,
-            sizeBytes: uploadedAudio.size,
-          })
-          .run();
-        tx.insert(comparisonRun).values({ id: comparisonRunId, audioId }).run();
-        tx.insert(providerRun).values(providerRunRows).run();
-      });
-
-      return { comparisonRunId };
+    async ({
+      body: { audio: uploadedAudio, providers: selectedProviders },
+    }) => {
+      return createComparison(uploadedAudio, selectedProviders);
     },
     {
       body: t.Object({
