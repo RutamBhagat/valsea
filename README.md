@@ -76,3 +76,28 @@ VITE_SERVER_URL=https://valsea.rutam.dpdns.org bun run deploy
 bun run check
 bun run build
 ```
+
+## Benchmark
+
+The benchmark uses 10 fixed Mandarin-English code-switched utterances from MERaLiON's `Multitask-National-Speech-Corpus-v1` `ASR-PART4-Test` configuration and scores Mixed Error Rate (Mandarin characters + English words) plus p50/p95 provider-request latency.
+
+With the provider credentials already configured in `apps/server/.env`:
+
+```bash
+cd apps/qwen-modal
+uv run poe benchmark
+```
+
+The command validates the committed MERaLiON manifest against row metadata, WAV duration, and SHA-256, fetches only those 10 audio clips, calls VALSEA, Modal/Qwen, and Gemini directly, and writes `benchmark_result.json`. VALSEA uses `language=english` with correction/tags disabled so the benchmark is reproducible on the Free plan; Qwen and Gemini receive no language hint, and Gemini runs in verbatim mode. Gemini requests are paced 21 seconds apart to fit the small free-tier request quota; that pacing time is excluded from latency.
+
+Observed benchmark result from the latest run:
+
+| Provider | MER ↓ | p50 latency | p95 latency |
+| --- | ---: | ---: | ---: |
+| VALSEA | 45.0% | 9.13 s | 10.85 s |
+| Qwen3-ASR-1.7B | 49.9% | 5.65 s | 13.38 s |
+| Gemini 3.5 Transcribe | 48.95% | 6.21 s | 7.98 s |
+
+On this fixed MERaLiON code-switch benchmark, VALSEA currently has the lowest transcription error rate, while Qwen has the lowest median provider-request latency.
+
+Google documents Gemini API rate limits as **per project, not per API key**, across RPM/TPM/RPD dimensions; exceeding any active limit returns a rate-limit error. In the AI Studio project inspected during development, `gemini-3.5-transcribe` showed limits of **3 RPM, 10K TPM, and 25 RPD**. The benchmark API key may belong to a different project/account, so those numbers are an observed reference rather than a guarantee for the key used to reproduce the run. A project with prior transcription traffic can therefore return HTTP 429 during the benchmark even when the request itself is valid. Check the active limits for the API key's project in Google AI Studio and rerun after the quota window clears rather than treating a quota 429 as an ASR failure. See [Gemini API rate limits](https://ai.google.dev/gemini-api/docs/rate-limits).
