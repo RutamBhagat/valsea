@@ -11,9 +11,20 @@ RUN cd apps/server && bun run build
 FROM oven/bun:1 AS runner
 WORKDIR /app
 ENV NODE_ENV=production
-COPY --from=builder /app /app
+
+COPY package.json bun.lock ./
+COPY apps/server/package.json ./apps/server/package.json
+COPY packages/auth/package.json ./packages/auth/package.json
+COPY packages/config/package.json ./packages/config/package.json
+COPY packages/db/package.json ./packages/db/package.json
+COPY packages/env/package.json ./packages/env/package.json
+COPY packages/infra/package.json ./packages/infra/package.json
+RUN --mount=type=cache,target=/root/.bun/install/cache bun install --production --filter @valsea/server
+
+COPY --from=builder /app/apps/server/dist/index.mjs ./apps/server/dist/index.mjs
+COPY --from=builder /app/packages/db/src/migrations ./migrations
 
 EXPOSE 3000
-
 WORKDIR /app/apps/server
+USER bun
 CMD ["bun", "dist/index.mjs"]

@@ -41,11 +41,7 @@
     "db:generate": "vp run --filter @valsea/db db:generate",
     "db:migrate": "vp run --filter @valsea/db db:migrate",
     "deploy": "vp run --filter @valsea/infra deploy",
-    "destroy": "vp run --filter @valsea/infra destroy",
-    "docker:build": "docker compose build",
-    "docker:up": "docker compose up -d --build",
-    "docker:down": "docker compose down",
-    "docker:logs": "docker compose logs -f"
+    "destroy": "vp run --filter @valsea/infra destroy"
   },
   "dependencies": {
     "@valsea/env": "workspace:*",

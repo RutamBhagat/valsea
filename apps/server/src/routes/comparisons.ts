@@ -1,10 +1,9 @@
-import { protos } from "@google-cloud/tasks";
 import { db, eq } from "@valsea/db";
 import { audio, comparisonRun, providerRun } from "@valsea/db/schema/index";
 import { env } from "@valsea/env/server";
 import { Elysia, t } from "elysia";
 
-import { cloudTasks, storage } from "../lib/gcp";
+import { storage } from "../lib/gcp";
 
 const supportedAudioTypes = [
   "audio/flac",
@@ -30,42 +29,25 @@ export const comparisonRoutes = new Elysia().post(
       resumable: false,
     });
 
-    await db.batch([
-      db.insert(audio).values({
-        id: audioId,
-        objectKey,
-        filename: uploadedAudio.name,
-        contentType: uploadedAudio.type,
-        sizeBytes: uploadedAudio.size,
-      }),
-      db.insert(comparisonRun).values({ id: comparisonRunId, audioId }),
-      db.insert(providerRun).values({
-        id: providerRunId,
-        comparisonRunId,
-        provider: "valsea",
-        status: "queued",
-      }),
-    ]);
-
-    const parent = cloudTasks.queuePath(env.GCP_PROJECT_ID, env.GCP_REGION, env.CLOUD_TASKS_QUEUE);
-    const targetUrl = new URL("/internal/tasks/transcribe", env.TASK_TARGET_URL).toString();
-    const payload = Buffer.from(JSON.stringify({ providerRunId })).toString("base64");
-
-    await cloudTasks.createTask({
-      parent,
-      task: {
-        name: `${parent}/tasks/provider-${providerRunId}`,
-        httpRequest: {
-          httpMethod: protos.google.cloud.tasks.v2.HttpMethod.POST,
-          url: targetUrl,
-          headers: { "Content-Type": "application/json" },
-          body: payload,
-          oidcToken: {
-            serviceAccountEmail: env.TASK_INVOKER_SERVICE_ACCOUNT_EMAIL,
-            audience: env.TASK_TARGET_URL,
-          },
-        },
-      },
+    db.transaction((tx) => {
+      tx.insert(audio)
+        .values({
+          id: audioId,
+          objectKey,
+          filename: uploadedAudio.name,
+          contentType: uploadedAudio.type,
+          sizeBytes: uploadedAudio.size,
+        })
+        .run();
+      tx.insert(comparisonRun).values({ id: comparisonRunId, audioId }).run();
+      tx.insert(providerRun)
+        .values({
+          id: providerRunId,
+          comparisonRunId,
+          provider: "valsea",
+          status: "queued",
+        })
+        .run();
     });
 
     return { comparisonRunId };

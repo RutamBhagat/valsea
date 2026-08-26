@@ -1,0 +1,21 @@
+services:
+  app:
+    image: valsea-app:latest
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      - "127.0.0.1:3000:3000"
+    volumes:
+      - /var/lib/valsea:/data
+    mem_limit: 700m
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "bun",
+          "-e",
+          "const r=await fetch('http://localhost:3000');if(!r.ok)process.exit(1)",
+        ]
+      interval: 5s
+      timeout: 3s
+      retries: 12

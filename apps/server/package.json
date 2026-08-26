@@ -16,8 +16,6 @@
     "@elysiajs/cors": "^1.4.2",
     "@elysiajs/openapi": "^1.4.15",
     "@google-cloud/storage": "^8.0.1",
-    "@google-cloud/tasks": "^7.0.0",
-    "@grpc/grpc-js": "^1.14.4",
     "@sinclair/typebox": "^0.34.52",
     "@valsea/auth": "workspace:*",
     "@valsea/db": "workspace:*",
@@ -25,7 +23,6 @@
     "better-auth": "catalog:",
     "dotenv": "catalog:",
     "elysia": "^1.4.29",
-    "google-auth-library": "^11.0.2",
     "openai": "^7.5.0"
   },
   "devDependencies": {

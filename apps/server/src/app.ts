@@ -5,9 +5,10 @@ import { env } from "@valsea/env/server";
 import { Elysia, t } from "elysia";
 
 import { apiRoutes } from "./routes/api";
-import { taskRoutes } from "./routes/tasks";
+import { transcriptionWorker } from "./worker";
 
 export const app = new Elysia()
+  .use(transcriptionWorker)
   .use(
     openapi({
       path: "/openapi",
@@ -39,7 +40,6 @@ export const app = new Elysia()
     return status(405);
   })
   .use(apiRoutes)
-  .use(taskRoutes)
   .get("/", () => "OK" as const, {
     detail: {
       summary: "Check server health",

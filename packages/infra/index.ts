@@ -1,159 +1,169 @@
 import * as gcp from "@pulumi/gcp";
 import * as pulumi from "@pulumi/pulumi";
 
+const config = new pulumi.Config();
 const gcpConfig = new pulumi.Config("gcp");
-const appConfig = new pulumi.Config("app");
 
 function requireEnvironmentValue(name: string) {
   const value = process.env[name];
-  if (!value) throw new Error(`${name} must be set when it is not provided through Pulumi config`);
+  if (!value) throw new Error(`${name} must be set when Pulumi config does not provide it`);
   return value;
-}
-
-function runtimeSecret(configKey: string, environmentKey: string) {
-  return appConfig.getSecret(configKey) ?? pulumi.secret(requireEnvironmentValue(environmentKey));
-}
-
-function runtimeValue(configKey: string, environmentKey: string) {
-  return appConfig.get(configKey) ?? requireEnvironmentValue(environmentKey);
 }
 
 const project = gcpConfig.get("project") ?? requireEnvironmentValue("GCP_PROJECT_ID");
 const region = gcpConfig.get("region") ?? "us-west1";
-const serviceName = "valsea-api";
-const projectDetails = gcp.organizations.getProjectOutput({ projectId: project });
-const serviceUrl = pulumi.interpolate`https://${serviceName}-${projectDetails.number}.${region}.run.app`;
+const zone = config.get("zone") ?? `${region}-b`;
+const sshUsername = config.get("sshUsername") ?? "deploy";
+const sshPublicKey = config.require("sshPublicKey");
+const sshSourceRanges = config.getObject<string[]>("sshSourceRanges") ?? ["::/0"];
 
-const sharedRuntimeEnv = [
-  { name: "DATABASE_URL", value: runtimeSecret("databaseUrl", "DATABASE_URL") },
-  { name: "DATABASE_URL_DIRECT", value: runtimeSecret("databaseUrlDirect", "DATABASE_URL_DIRECT") },
-  { name: "BETTER_AUTH_SECRET", value: runtimeSecret("betterAuthSecret", "BETTER_AUTH_SECRET") },
-  { name: "BETTER_AUTH_URL", value: runtimeValue("betterAuthUrl", "BETTER_AUTH_URL") },
-  { name: "CORS_ORIGIN", value: runtimeValue("corsOrigin", "CORS_ORIGIN") },
-  { name: "GOOGLE_CLIENT_ID", value: runtimeSecret("googleClientId", "GOOGLE_CLIENT_ID") },
+const enabledServices = ["compute.googleapis.com", "iam.googleapis.com", "storage.googleapis.com"];
+
+const projectServices = enabledServices.map(
+  (service) =>
+    new gcp.projects.Service(`api-${service.split(".")[0]}`, {
+      project,
+      service,
+      disableOnDestroy: false,
+    }),
+);
+
+const audioBucket = new gcp.storage.Bucket(
+  "audio",
   {
-    name: "GOOGLE_CLIENT_SECRET",
-    value: runtimeSecret("googleClientSecret", "GOOGLE_CLIENT_SECRET"),
-  },
-  { name: "VALSEA_API_KEY", value: runtimeSecret("valseaApiKey", "VALSEA_API_KEY") },
-];
-
-const audioBucket = new gcp.storage.Bucket("audio", {
-  project,
-  location: region,
-  uniformBucketLevelAccess: true,
-});
-
-const transcriptionQueue = new gcp.cloudtasks.Queue("transcription", {
-  project,
-  name: "valsea-transcriptions",
-  location: region,
-});
-
-const backendRepository = new gcp.artifactregistry.Repository("backend", {
-  project,
-  repositoryId: "valsea",
-  location: region,
-  format: "DOCKER",
-  description: "VALSEA backend images",
-  cleanupPolicyDryRun: false,
-  cleanupPolicies: [
-    {
-      id: "delete-old-images",
-      action: "DELETE",
-      condition: {
-        tagState: "ANY",
-        olderThan: "7d",
-      },
-    },
-    {
-      id: "keep-recent-images",
-      action: "KEEP",
-      mostRecentVersions: {
-        keepCount: 3,
-      },
-    },
-  ],
-});
-
-const backendImage = pulumi.interpolate`${region}-docker.pkg.dev/${project}/${backendRepository.repositoryId}/server:latest`;
-
-const taskInvoker = new gcp.serviceaccount.Account("task-invoker", {
-  project,
-  accountId: "valsea-task-invoker",
-  displayName: "VALSEA Cloud Tasks invoker",
-});
-
-const runtimeServiceAccount = new gcp.serviceaccount.Account("api-service", {
-  project,
-  accountId: "valsea-api",
-  displayName: "VALSEA runtime service",
-});
-
-new gcp.storage.BucketIAMMember("api-audio-writer", {
-  bucket: audioBucket.name,
-  role: "roles/storage.objectCreator",
-  member: pulumi.interpolate`serviceAccount:${runtimeServiceAccount.email}`,
-});
-
-new gcp.storage.BucketIAMMember("runtime-audio-reader", {
-  bucket: audioBucket.name,
-  role: "roles/storage.objectViewer",
-  member: pulumi.interpolate`serviceAccount:${runtimeServiceAccount.email}`,
-});
-
-new gcp.cloudtasks.QueueIamMember("api-task-enqueuer", {
-  project,
-  location: region,
-  name: transcriptionQueue.name,
-  role: "roles/cloudtasks.enqueuer",
-  member: pulumi.interpolate`serviceAccount:${runtimeServiceAccount.email}`,
-});
-
-new gcp.serviceaccount.IAMMember("api-task-invoker-user", {
-  serviceAccountId: taskInvoker.name,
-  role: "roles/iam.serviceAccountUser",
-  member: pulumi.interpolate`serviceAccount:${runtimeServiceAccount.email}`,
-});
-
-const apiService = new gcp.cloudrunv2.Service("api", {
-  project,
-  name: serviceName,
-  location: region,
-  deletionProtection: false,
-  ingress: "INGRESS_TRAFFIC_ALL",
-  invokerIamDisabled: true,
-  template: {
-    serviceAccount: runtimeServiceAccount.email,
-    containers: [
+    project,
+    name: `${project}-valsea-audio`,
+    location: region,
+    uniformBucketLevelAccess: true,
+    forceDestroy: true,
+    lifecycleRules: [
       {
-        image: backendImage,
-        ports: { containerPort: 3000 },
-        envs: [
-          ...sharedRuntimeEnv,
-          { name: "GCP_PROJECT_ID", value: project },
-          { name: "GCP_REGION", value: region },
-          { name: "GCS_AUDIO_BUCKET", value: audioBucket.name },
-          { name: "CLOUD_TASKS_QUEUE", value: transcriptionQueue.name },
-          { name: "TASK_INVOKER_SERVICE_ACCOUNT_EMAIL", value: taskInvoker.email },
-          { name: "TASK_TARGET_URL", value: serviceUrl },
-        ],
+        action: { type: "Delete" },
+        condition: { age: 7 },
       },
     ],
   },
+  { dependsOn: projectServices },
+);
+
+const vmServiceAccount = new gcp.serviceaccount.Account("vm-service", {
+  project,
+  accountId: "valsea-vm",
+  displayName: "VALSEA VM service",
 });
 
-new gcp.cloudrunv2.ServiceIamMember("service-task-invoker", {
-  project,
-  location: region,
-  name: apiService.name,
-  role: "roles/run.invoker",
-  member: pulumi.interpolate`serviceAccount:${taskInvoker.email}`,
+new gcp.storage.BucketIAMMember("vm-audio-writer", {
+  bucket: audioBucket.name,
+  role: "roles/storage.objectCreator",
+  member: pulumi.interpolate`serviceAccount:${vmServiceAccount.email}`,
 });
+
+new gcp.storage.BucketIAMMember("vm-audio-reader", {
+  bucket: audioBucket.name,
+  role: "roles/storage.objectViewer",
+  member: pulumi.interpolate`serviceAccount:${vmServiceAccount.email}`,
+});
+
+const network = new gcp.compute.Network(
+  "network",
+  {
+    project,
+    name: "valsea",
+    autoCreateSubnetworks: false,
+  },
+  { dependsOn: projectServices },
+);
+
+const subnet = new gcp.compute.Subnetwork("subnet", {
+  project,
+  name: "valsea",
+  network: network.id,
+  region,
+  stackType: "IPV6_ONLY",
+  ipv6AccessType: "EXTERNAL",
+});
+
+new gcp.compute.Firewall("ssh", {
+  project,
+  name: "valsea-ssh",
+  network: network.id,
+  direction: "INGRESS",
+  sourceRanges: sshSourceRanges,
+  targetTags: ["valsea-server"],
+  allows: [{ protocol: "tcp", ports: ["22"] }],
+});
+
+const startupScript = `#!/usr/bin/env bash
+set -euxo pipefail
+
+id -u ${sshUsername} >/dev/null 2>&1 || useradd --create-home --shell /bin/bash ${sshUsername}
+
+if ! command -v docker >/dev/null 2>&1; then
+  apt-get update
+  apt-get install -y ca-certificates curl
+  curl -fsSL https://get.docker.com | sh
+fi
+
+systemctl enable --now docker
+usermod -aG docker ${sshUsername}
+install -d -o ${sshUsername} -g ${sshUsername} /opt/valsea
+install -d -o 1000 -g 1000 /var/lib/valsea
+
+if [ ! -f /swapfile ]; then
+  fallocate -l 2G /swapfile || dd if=/dev/zero of=/swapfile bs=1M count=2048
+  chmod 600 /swapfile
+  mkswap /swapfile
+fi
+swapon /swapfile || true
+grep -q '^/swapfile ' /etc/fstab || echo '/swapfile none swap sw 0 0' >> /etc/fstab
+printf 'vm.swappiness=10\n' > /etc/sysctl.d/99-valsea-swap.conf
+sysctl --system
+`;
+
+const server = new gcp.compute.Instance(
+  "server",
+  {
+    project,
+    name: "valsea",
+    zone,
+    machineType: "e2-micro",
+    allowStoppingForUpdate: true,
+    bootDisk: {
+      autoDelete: true,
+      initializeParams: {
+        image: "projects/ubuntu-os-cloud/global/images/family/ubuntu-2404-lts-amd64",
+        size: 30,
+        type: "pd-standard",
+      },
+    },
+    networkInterfaces: [
+      {
+        subnetwork: subnet.id,
+        stackType: "IPV6_ONLY",
+        ipv6AccessConfigs: [{ networkTier: "PREMIUM" }],
+      },
+    ],
+    metadata: {
+      "ssh-keys": pulumi.interpolate`${sshUsername}:${sshPublicKey}`,
+    },
+    metadataStartupScript: startupScript,
+    serviceAccount: {
+      email: vmServiceAccount.email,
+      scopes: ["https://www.googleapis.com/auth/cloud-platform"],
+    },
+    shieldedInstanceConfig: {
+      enableIntegrityMonitoring: true,
+      enableSecureBoot: true,
+      enableVtpm: true,
+    },
+    tags: ["valsea-server"],
+  },
+  { dependsOn: projectServices },
+);
 
 export const audioBucketName = audioBucket.name;
-export const transcriptionQueueName = transcriptionQueue.name;
-export const backendRepositoryName = backendRepository.name;
-export const backendImageName = backendImage;
-export const apiUrl = apiService.uri;
-export const taskInvokerEmail = taskInvoker.email;
+export const instanceName = server.name;
+export const instanceZone = server.zone;
+export const serverIpv6 = server.networkInterfaces.apply(
+  ([networkInterface]) => networkInterface?.ipv6AccessConfigs?.[0]?.externalIpv6,
+);

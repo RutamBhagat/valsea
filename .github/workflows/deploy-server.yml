@@ -1,0 +1,56 @@
+name: Deploy server
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "apps/server/**"
+      - "packages/auth/**"
+      - "packages/db/**"
+      - "packages/env/**"
+      - "deploy/**"
+      - "package.json"
+      - "bun.lock"
+      - ".github/workflows/deploy-server.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: production-server
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build image
+        run: docker build -f apps/server/Dockerfile -t valsea-app:latest .
+
+      - name: Configure SSH
+        env:
+          VM_HOST: ${{ secrets.VM_HOST }}
+          VM_SSH_PRIVATE_KEY: ${{ secrets.VM_SSH_PRIVATE_KEY }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$VM_SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H "$VM_HOST" >> ~/.ssh/known_hosts
+
+      - name: Upload deployment files and environment
+        env:
+          VM_HOST: ${{ secrets.VM_HOST }}
+          VM_USER: ${{ vars.VM_USER || 'deploy' }}
+          PRODUCTION_ENV: ${{ secrets.PRODUCTION_ENV }}
+        run: |
+          ssh "$VM_USER@$VM_HOST" 'mkdir -p /opt/valsea'
+          tar -C deploy -cf - docker-compose.yml | ssh "$VM_USER@$VM_HOST" 'tar -C /opt/valsea -xf -'
+          printf '%s' "$PRODUCTION_ENV" | ssh "$VM_USER@$VM_HOST" 'cat > /opt/valsea/.env && chmod 600 /opt/valsea/.env'
+
+      - name: Upload image and restart services
+        env:
+          VM_HOST: ${{ secrets.VM_HOST }}
+          VM_USER: ${{ vars.VM_USER || 'deploy' }}
+        run: |
+          docker save valsea-app:latest | gzip -1 | ssh "$VM_USER@$VM_HOST" 'gunzip | docker load'
+          ssh "$VM_USER@$VM_HOST" 'cd /opt/valsea && docker compose up -d --force-recreate --no-build --wait --wait-timeout 60 && docker image prune -af'

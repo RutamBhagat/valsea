@@ -1,45 +1,49 @@
-import { relations } from "drizzle-orm";
-import { boolean, index, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { relations, sql } from "drizzle-orm";
+import { index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
-export const user = pgTable("user", {
-  id: uuid().defaultRandom().primaryKey(),
+const timestamp = () => integer({ mode: "timestamp_ms" });
+const now = sql`(cast(unixepoch('subsecond') * 1000 as integer))`;
+
+export const user = sqliteTable("user", {
+  id: text().primaryKey(),
   name: text().notNull(),
   email: text().notNull().unique(),
-  emailVerified: boolean().default(false).notNull(),
+  emailVerified: integer({ mode: "boolean" }).default(false).notNull(),
   image: text(),
-  createdAt: timestamp().defaultNow().notNull(),
+  createdAt: timestamp().default(now).notNull(),
   updatedAt: timestamp()
-    .defaultNow()
+    .default(now)
     .$onUpdate(() => /* @__PURE__ */ new Date())
     .notNull(),
 });
 
-export const session = pgTable(
+export const session = sqliteTable(
   "session",
   {
-    id: uuid().defaultRandom().primaryKey(),
+    id: text().primaryKey(),
     expiresAt: timestamp().notNull(),
     token: text().notNull().unique(),
-    createdAt: timestamp().defaultNow().notNull(),
+    createdAt: timestamp().default(now).notNull(),
     updatedAt: timestamp()
+      .default(now)
       .$onUpdate(() => /* @__PURE__ */ new Date())
       .notNull(),
     ipAddress: text(),
     userAgent: text(),
-    userId: uuid()
+    userId: text()
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
   },
   (table) => [index("session_user_id_idx").on(table.userId)],
 );
 
-export const account = pgTable(
+export const account = sqliteTable(
   "account",
   {
-    id: uuid().defaultRandom().primaryKey(),
+    id: text().primaryKey(),
     accountId: text().notNull(),
     providerId: text().notNull(),
-    userId: uuid()
+    userId: text()
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
     accessToken: text(),
@@ -48,24 +52,26 @@ export const account = pgTable(
     accessTokenExpiresAt: timestamp(),
     refreshTokenExpiresAt: timestamp(),
     scope: text(),
-    createdAt: timestamp().defaultNow().notNull(),
+    password: text(),
+    createdAt: timestamp().default(now).notNull(),
     updatedAt: timestamp()
+      .default(now)
       .$onUpdate(() => /* @__PURE__ */ new Date())
       .notNull(),
   },
   (table) => [index("account_user_id_idx").on(table.userId)],
 );
 
-export const verification = pgTable(
+export const verification = sqliteTable(
   "verification",
   {
-    id: uuid().defaultRandom().primaryKey(),
+    id: text().primaryKey(),
     identifier: text().notNull(),
     value: text().notNull(),
     expiresAt: timestamp().notNull(),
-    createdAt: timestamp().defaultNow().notNull(),
+    createdAt: timestamp().default(now).notNull(),
     updatedAt: timestamp()
-      .defaultNow()
+      .default(now)
       .$onUpdate(() => /* @__PURE__ */ new Date())
       .notNull(),
   },

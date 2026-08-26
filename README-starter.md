@@ -90,19 +90,6 @@ Deploys are staged and default to a personal `dev_<username>` stage. For product
 cd packages/infra && bunx alchemy deploy --stage production
 ```
 
-### Docker Compose
-
-- Target: server
-- Config: `docker-compose.yml` (app Dockerfiles live in `apps/*/Dockerfile`)
-- Build images: bun run docker:build
-- Start: bun run docker:up
-- Logs: bun run docker:logs
-- Stop: bun run docker:down
-
-Environment variables are read from each app's `.env` file (baked into web builds for public variables) and overridden in `docker-compose.yml` for container networking.
-
-For more details, see the guide on [Deploying with Docker Compose](https://www.better-t-stack.dev/docs/guides/docker).
-
 ## Git Hooks and Formatting
 
 - Optional native Vite+ hooks: `bun run hooks:setup`
@@ -138,7 +125,3 @@ valsea/
 - `bun run format`: Run Vite+ formatting
 - `bun run staged`: Run Vite+ checks against staged files
 - `bun run hooks:setup`: Install Vite+ native Git hooks with `vp config`
-- `bun run docker:build`: Build the Docker Compose images
-- `bun run docker:up`: Build and start the Docker Compose stack
-- `bun run docker:logs`: Tail logs from the Docker Compose stack
-- `bun run docker:down`: Stop the Docker Compose stack
