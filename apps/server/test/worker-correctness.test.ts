@@ -67,7 +67,7 @@ function providerRegistry(overrides: Partial<Record<ProviderId, TranscriptionPro
   return {
     valsea: overrides.valsea ?? success("valsea"),
     qwen: overrides.qwen ?? success("qwen"),
-    whisper: overrides.whisper ?? success("whisper"),
+    gemini: overrides.gemini ?? success("gemini"),
   } satisfies Record<ProviderId, TranscriptionProvider>;
 }
 
@@ -79,7 +79,7 @@ test.serial("selected providers create exactly the corresponding queued runs", a
 
   const { comparisonRunId } = await createComparison(
     uploadedAudio,
-    ["valsea", "whisper"],
+    ["valsea", "gemini"],
     storeAudio,
   );
 
@@ -92,8 +92,8 @@ test.serial("selected providers create exactly the corresponding queued runs", a
 
   expect(storeAudio).toHaveBeenCalledTimes(1);
   expect(rows).toEqual([
+    { provider: "gemini", status: "queued" },
     { provider: "valsea", status: "queued" },
-    { provider: "whisper", status: "queued" },
   ]);
 });
 
@@ -128,7 +128,7 @@ test.serial("queued work dispatches to the provider recorded on the run", async 
 
   expect(qwenTranscribe).toHaveBeenCalledTimes(1);
   expect(registry.valsea.transcribe).not.toHaveBeenCalled();
-  expect(registry.whisper.transcribe).not.toHaveBeenCalled();
+  expect(registry.gemini.transcribe).not.toHaveBeenCalled();
 });
 
 test.serial("a completed run is not intentionally executed again", async () => {
@@ -143,15 +143,15 @@ test.serial("a completed run is not intentionally executed again", async () => {
 });
 
 test.serial("one provider failure leaves another provider result intact", async () => {
-  const { comparisonRunId } = seedComparison([{ provider: "valsea" }, { provider: "whisper" }]);
+  const { comparisonRunId } = seedComparison([{ provider: "valsea" }, { provider: "gemini" }]);
   const registry = providerRegistry({
     valsea: {
       transcribe: mock(async () => {
         throw new Error("provider unavailable");
       }),
     },
-    whisper: {
-      transcribe: mock(async () => ({ text: "whisper survived" })),
+    gemini: {
+      transcribe: mock(async () => ({ text: "gemini survived" })),
     },
   });
   const downloadAudio = mock(async () => new Uint8Array([1, 2, 3]));
@@ -173,16 +173,16 @@ test.serial("one provider failure leaves another provider result intact", async 
 
   expect(rows).toEqual([
     {
+      provider: "gemini",
+      status: "succeeded",
+      transcript: "gemini survived",
+      error: null,
+    },
+    {
       provider: "valsea",
       status: "failed",
       transcript: null,
       error: "Transcription failed",
-    },
-    {
-      provider: "whisper",
-      status: "succeeded",
-      transcript: "whisper survived",
-      error: null,
     },
   ]);
 });
@@ -190,7 +190,7 @@ test.serial("one provider failure leaves another provider result intact", async 
 test.serial("startup recovery requeues interrupted running work only", () => {
   const { providerRunIds } = seedComparison([
     { provider: "qwen", status: "running" },
-    { provider: "whisper", status: "succeeded" },
+    { provider: "gemini", status: "succeeded" },
   ]);
 
   recoverInterruptedRuns();
@@ -207,5 +207,5 @@ test.serial("startup recovery requeues interrupted running work only", () => {
     .get();
 
   expect(recovered).toEqual({ status: "queued", startedAt: null });
-  expect(completed).toEqual({ status: "succeeded", transcript: "whisper transcript" });
+  expect(completed).toEqual({ status: "succeeded", transcript: "gemini transcript" });
 });

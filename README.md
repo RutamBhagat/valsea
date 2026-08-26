@@ -1,6 +1,6 @@
 # Valsea
 
-Valsea compares audio transcriptions from VALSEA, Cloudflare Workers AI Whisper Large V3 Turbo, and Qwen3-ASR-1.7B on Modal. The repository contains a TanStack Start web application, an Elysia server, shared authentication and database packages, and the Cloudflare web deployment definition.
+Valsea compares audio transcriptions from VALSEA, Gemini 3.5 Transcribe, and Qwen3-ASR-1.7B on Modal. The repository contains a TanStack Start web application, an Elysia server, shared authentication and database packages, and the Cloudflare web deployment definition.
 
 ## Requirements
 

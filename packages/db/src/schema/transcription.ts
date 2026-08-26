@@ -1,7 +1,7 @@
 import { sql } from "drizzle-orm";
 import { integer, sqliteTable, text, unique } from "drizzle-orm/sqlite-core";
 
-const providers = ["valsea", "qwen", "whisper"] as const;
+const providers = ["valsea", "qwen", "gemini"] as const;
 const providerRunStatuses = ["queued", "running", "succeeded", "failed"] as const;
 const timestamp = () => integer({ mode: "timestamp_ms" });
 const now = sql`(cast(unixepoch('subsecond') * 1000 as integer))`;

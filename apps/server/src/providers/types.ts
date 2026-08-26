@@ -1,4 +1,4 @@
-export type ProviderId = "valsea" | "qwen" | "whisper";
+export type ProviderId = "valsea" | "qwen" | "gemini";
 
 export interface TranscriptionInput {
   audio: Uint8Array;

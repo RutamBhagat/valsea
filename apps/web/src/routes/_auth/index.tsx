@@ -33,7 +33,7 @@ const supportedAudioTypes = [
 const providerDetails = [
   { id: "valsea", name: "VALSEA", model: "valsea-transcribe" },
   { id: "qwen", name: "Qwen", model: "Qwen3-ASR-1.7B / Modal" },
-  { id: "whisper", name: "Whisper", model: "whisper-large-v3-turbo" },
+  { id: "gemini", name: "Gemini", model: "Gemini 3.5 Transcribe" },
 ] as const;
 
 type ProviderRunView = {
@@ -115,7 +115,7 @@ function HomeComponent() {
   const [selectedProviders, setSelectedProviders] = useState<ComparisonProviderId[]>([
     "valsea",
     "qwen",
-    "whisper",
+    "gemini",
   ]);
   const { comparisonRunId, comparison, startComparison, isSubmitting, requestError } =
     useComparison();
@@ -137,7 +137,7 @@ function HomeComponent() {
             Speech transcription comparison
           </p>
           <h1 className="text-3xl font-semibold tracking-tight md:text-4xl">
-            Compare VALSEA, Qwen, and Whisper on the same audio
+            Compare VALSEA, Qwen, and Gemini on the same audio
           </h1>
           <p className="text-sm leading-6 text-muted-foreground">
             Upload one supported audio file and choose at least two providers. Each selected

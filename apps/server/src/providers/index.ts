@@ -1,10 +1,10 @@
 import type { ProviderId, TranscriptionProvider } from "./types";
+import { gemini } from "./gemini";
 import { qwen } from "./qwen";
 import { valsea } from "./valsea";
-import { whisper } from "./whisper";
 
 export const providers = {
   valsea,
-  whisper,
+  gemini,
   qwen,
 } satisfies Record<ProviderId, TranscriptionProvider>;

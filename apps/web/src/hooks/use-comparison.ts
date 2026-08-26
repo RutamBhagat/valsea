@@ -4,7 +4,7 @@ import { useState } from "react";
 import { api } from "@/lib/api";
 import { getApiErrorMessage } from "@/lib/api-error";
 
-export type ComparisonProviderId = "valsea" | "qwen" | "whisper";
+export type ComparisonProviderId = "valsea" | "qwen" | "gemini";
 
 export function useComparison() {
   const [comparisonRunId, setComparisonRunId] = useState<string | null>(null);

@@ -54,15 +54,13 @@ export async function createComparison(
 export const comparisonRoutes = new Elysia()
   .post(
     "/comparisons",
-    async ({
-      body: { audio: uploadedAudio, providers: selectedProviders },
-    }) => {
+    async ({ body: { audio: uploadedAudio, providers: selectedProviders } }) => {
       return createComparison(uploadedAudio, selectedProviders);
     },
     {
       body: t.Object({
         audio: t.File({ type: supportedAudioTypes }),
-        providers: t.Array(t.UnionEnum(["valsea", "qwen", "whisper"]), {
+        providers: t.Array(t.UnionEnum(["valsea", "qwen", "gemini"]), {
           minItems: 2,
           uniqueItems: true,
         }),
