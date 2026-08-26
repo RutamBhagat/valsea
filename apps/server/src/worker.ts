@@ -35,6 +35,7 @@ async function processNextRun() {
 
   const run = db
     .select({
+      comparisonRunId: providerRun.comparisonRunId,
       provider: providerRun.provider,
       objectKey: audio.objectKey,
       filename: audio.filename,
@@ -47,18 +48,19 @@ async function processNextRun() {
     .get();
 
   let latencyMs: number | null = null;
+  let providerStartedAt: number | null = null;
 
   try {
     if (!run) throw new Error(`Provider run ${providerRunId} has no audio`);
 
     const audioBytes = await downloadAudio(run.objectKey);
-    const startedAt = performance.now();
+    providerStartedAt = performance.now();
     const result = await providers[run.provider].transcribe({
       audio: audioBytes,
       filename: run.filename,
       contentType: run.contentType,
     });
-    latencyMs = Math.round(performance.now() - startedAt);
+    latencyMs = Math.round(performance.now() - providerStartedAt);
 
     db.update(providerRun)
       .set({
@@ -70,8 +72,21 @@ async function processNextRun() {
       })
       .where(eq(providerRun.id, providerRunId))
       .run();
-  } catch (error) {
-    console.error(`Transcription ${providerRunId} failed`, error);
+
+    console.info(
+      JSON.stringify({
+        comparisonRunId: run.comparisonRunId,
+        providerRunId,
+        provider: run.provider,
+        status: "succeeded",
+        latencyMs,
+      }),
+    );
+  } catch {
+    if (providerStartedAt !== null) {
+      latencyMs = Math.round(performance.now() - providerStartedAt);
+    }
+
     db.update(providerRun)
       .set({
         status: "failed",
@@ -81,6 +96,20 @@ async function processNextRun() {
       })
       .where(eq(providerRun.id, providerRunId))
       .run();
+
+    if (run) {
+      console.error(
+        JSON.stringify({
+          comparisonRunId: run.comparisonRunId,
+          providerRunId,
+          provider: run.provider,
+          status: "failed",
+          latencyMs,
+        }),
+      );
+    } else {
+      console.error(`Transcription ${providerRunId} failed`);
+    }
   }
 
   return true;
