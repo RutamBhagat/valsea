@@ -4,6 +4,7 @@ version = "0.1.0"
 description = "Modal-hosted Qwen3 ASR service and benchmark client"
 requires-python = ">=3.12"
 dependencies = [
+    "fastapi>=0.115,<1",
     "modal>=1.5.4,<2",
 ]
 
@@ -13,7 +14,7 @@ build-backend = "uv_build"
 
 [tool.poe.tasks]
 _compile = "python -m compileall -q src scripts"
-_typecheck = "uvx --from basedpyright==1.39.10 basedpyright"
+_typecheck = "basedpyright"
 check = ["_compile", "_typecheck"]
 modal-dev = "modal serve -m qwen_modal.app"
 modal-deploy = "modal deploy -m qwen_modal.app"
@@ -21,13 +22,12 @@ benchmark = "python scripts/benchmark.py"
 
 [tool.basedpyright]
 include = ["src", "scripts"]
-stubPath = "typings"
-typeCheckingMode = "recommended"
+typeCheckingMode = "strict"
 allowedUntypedLibraries = ["modal"]
-reportMissingModuleSource = false
 pythonVersion = "3.12"
 
 [dependency-groups]
 dev = [
+    "basedpyright>=1.31.4,<2",
     "poethepoet>=0.48.0",
 ]

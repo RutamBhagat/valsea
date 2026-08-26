@@ -22,6 +22,10 @@ The API listens on `http://localhost:3000`. The web application listens on `http
 
 Production web application: https://app-valsea.rutam.dpdns.org
 
+Modal Qwen transcription endpoint: https://rutambhagat-valsea--qwen3-asr-qwenasr-transcribe.modal.run
+
+The endpoint requires a Modal proxy token in the `Authorization: Bearer $MODAL_PROXY_TOKEN` header.
+
 Required server variables are documented in `apps/server/.env.example`. Keep all provider credentials in the server environment. The browser must not receive them.
 
 ## API documentation
