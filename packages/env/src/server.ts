@@ -12,6 +12,8 @@ export const env = createEnv({
     GOOGLE_CLIENT_ID: nonEmptyString,
     GOOGLE_CLIENT_SECRET: nonEmptyString,
     VALSEA_API_KEY: nonEmptyString,
+    CLOUDFLARE_ACCOUNT_ID: nonEmptyString,
+    CLOUDFLARE_API_TOKEN: nonEmptyString,
     R2_ACCOUNT_ID: nonEmptyString,
     R2_ACCESS_KEY_ID: nonEmptyString,
     R2_SECRET_ACCESS_KEY: nonEmptyString,

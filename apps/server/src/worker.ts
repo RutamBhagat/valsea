@@ -3,7 +3,7 @@ import { audio, comparisonRun, providerRun } from "@valsea/db/schema/index";
 import { Elysia } from "elysia";
 
 import { downloadAudio } from "./lib/r2";
-import { valsea } from "./providers/valsea";
+import { providers } from "./providers";
 
 const idlePollMs = 1_000;
 
@@ -50,11 +50,10 @@ async function processNextRun() {
 
   try {
     if (!run) throw new Error(`Provider run ${providerRunId} has no audio`);
-    if (run.provider !== "valsea") throw new Error(`Unsupported provider: ${run.provider}`);
 
     const audioBytes = await downloadAudio(run.objectKey);
     const startedAt = performance.now();
-    const result = await valsea.transcribe({
+    const result = await providers[run.provider].transcribe({
       audio: audioBytes,
       filename: run.filename,
       contentType: run.contentType,

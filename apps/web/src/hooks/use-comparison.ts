@@ -33,7 +33,10 @@ export function useComparison() {
 
   const createComparison = useMutation({
     mutationFn: async (audio: File) => {
-      const { data } = await api.api.comparisons.post({ audio });
+      const { data } = await api.api.comparisons.post({
+        audio,
+        providers: ["valsea", "whisper"],
+      });
       if (!data) {
         throw new Error("Comparison creation returned no data");
       }

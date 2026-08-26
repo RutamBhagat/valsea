@@ -16,10 +16,15 @@ const supportedAudioTypes = [
 
 export const comparisonRoutes = new Elysia().post(
   "/comparisons",
-  async ({ body: { audio: uploadedAudio } }) => {
+  async ({ body: { audio: uploadedAudio, providers: selectedProviders } }) => {
     const audioId = crypto.randomUUID();
     const comparisonRunId = crypto.randomUUID();
-    const providerRunId = crypto.randomUUID();
+    const providerRunRows = selectedProviders.map((provider) => ({
+      id: crypto.randomUUID(),
+      comparisonRunId,
+      provider,
+      status: "queued" as const,
+    }));
     const objectKey = `audio/${audioId}`;
     const bytes = Buffer.from(await uploadedAudio.arrayBuffer());
 
@@ -36,20 +41,19 @@ export const comparisonRoutes = new Elysia().post(
         })
         .run();
       tx.insert(comparisonRun).values({ id: comparisonRunId, audioId }).run();
-      tx.insert(providerRun)
-        .values({
-          id: providerRunId,
-          comparisonRunId,
-          provider: "valsea",
-          status: "queued",
-        })
-        .run();
+      tx.insert(providerRun).values(providerRunRows).run();
     });
 
     return { comparisonRunId };
   },
   {
-    body: t.Object({ audio: t.File({ type: supportedAudioTypes }) }),
+    body: t.Object({
+      audio: t.File({ type: supportedAudioTypes }),
+      providers: t.Array(
+        t.UnionEnum(["valsea", "whisper"]),
+        { minItems: 2, uniqueItems: true },
+      ),
+    }),
     detail: {
       summary: "Create a VALSEA transcription comparison",
       tags: ["Comparisons"],
