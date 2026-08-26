@@ -17,7 +17,7 @@ const sshUsername = config.get("sshUsername") ?? "deploy";
 const sshPublicKey = config.require("sshPublicKey");
 const sshSourceRanges = config.getObject<string[]>("sshSourceRanges") ?? ["::/0"];
 
-const enabledServices = ["compute.googleapis.com", "iam.googleapis.com", "storage.googleapis.com"];
+const enabledServices = ["compute.googleapis.com"];
 
 const projectServices = enabledServices.map(
   (service) =>
@@ -27,42 +27,6 @@ const projectServices = enabledServices.map(
       disableOnDestroy: false,
     }),
 );
-
-const audioBucket = new gcp.storage.Bucket(
-  "audio",
-  {
-    project,
-    name: `${project}-valsea-audio`,
-    location: region,
-    uniformBucketLevelAccess: true,
-    forceDestroy: true,
-    lifecycleRules: [
-      {
-        action: { type: "Delete" },
-        condition: { age: 7 },
-      },
-    ],
-  },
-  { dependsOn: projectServices },
-);
-
-const vmServiceAccount = new gcp.serviceaccount.Account("vm-service", {
-  project,
-  accountId: "valsea-vm",
-  displayName: "VALSEA VM service",
-});
-
-new gcp.storage.BucketIAMMember("vm-audio-writer", {
-  bucket: audioBucket.name,
-  role: "roles/storage.objectCreator",
-  member: pulumi.interpolate`serviceAccount:${vmServiceAccount.email}`,
-});
-
-new gcp.storage.BucketIAMMember("vm-audio-reader", {
-  bucket: audioBucket.name,
-  role: "roles/storage.objectViewer",
-  member: pulumi.interpolate`serviceAccount:${vmServiceAccount.email}`,
-});
 
 const network = new gcp.compute.Network(
   "network",
@@ -147,10 +111,6 @@ const server = new gcp.compute.Instance(
       "ssh-keys": pulumi.interpolate`${sshUsername}:${sshPublicKey}`,
     },
     metadataStartupScript: startupScript,
-    serviceAccount: {
-      email: vmServiceAccount.email,
-      scopes: ["https://www.googleapis.com/auth/cloud-platform"],
-    },
     shieldedInstanceConfig: {
       enableIntegrityMonitoring: true,
       enableSecureBoot: true,
@@ -161,7 +121,6 @@ const server = new gcp.compute.Instance(
   { dependsOn: projectServices },
 );
 
-export const audioBucketName = audioBucket.name;
 export const instanceName = server.name;
 export const instanceZone = server.zone;
 export const serverIpv6 = server.networkInterfaces.apply(

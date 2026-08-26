@@ -2,20 +2,14 @@
 
 ## Local development
 
-Install the official Floci CLI once:
-
-```bash
-brew install floci-io/floci/floci
-```
-
-Copy the server environment and start the app:
+Copy the server environment, add bucket-scoped R2 credentials, and start the app:
 
 ```bash
 cp apps/server/.env.example apps/server/.env
 bun run dev
 ```
 
-`bun run dev` starts Floci for local GCS. Use `bun run dev:cloud:stop` to stop it. SQLite data is stored in `.data/valsea.sqlite`.
+Local development uses the remote R2 bucket. SQLite data is stored in `.data/valsea.sqlite`.
 
 ## Production infrastructure
 
@@ -24,7 +18,6 @@ The backend runs on one Compute Engine `e2-micro` VM. Pulumi creates:
 - One 30 GB boot disk for the OS, SQLite, Docker, and 2 GB swap.
 - An IPv6-only subnet and external IPv6 address. It does not assign a public IPv4 address.
 - An IPv6 SSH firewall rule. The app only listens on VM localhost until a tunnel is added.
-- A GCS audio bucket and VM service account.
 
 Configure Pulumi with the SSH public key that matches the CI private key:
 
@@ -70,9 +63,10 @@ CORS_ORIGIN=https://app.example.com
 GOOGLE_CLIENT_ID=
 GOOGLE_CLIENT_SECRET=
 VALSEA_API_KEY=
-GCP_PROJECT_ID=
-GCP_REGION=us-west1
-GCS_AUDIO_BUCKET=
+R2_ACCOUNT_ID=90bd6cb4a52826832b4e83b162620d66
+R2_ACCESS_KEY_ID=
+R2_SECRET_ACCESS_KEY=
+R2_AUDIO_BUCKET=valsea-audio
 ```
 
-Get `GCS_AUDIO_BUCKET` from the Pulumi `audioBucketName` output.
+Create an R2 API token with Object Read & Write access limited to the `valsea-audio` bucket. Use its Access Key ID and Secret Access Key for the two R2 credential values.

@@ -1,9 +1,8 @@
 import { and, db, eq } from "@valsea/db";
 import { audio, comparisonRun, providerRun } from "@valsea/db/schema/index";
-import { env } from "@valsea/env/server";
 import { Elysia } from "elysia";
 
-import { storage } from "./lib/gcp";
+import { downloadAudio } from "./lib/r2";
 import { valsea } from "./providers/valsea";
 
 const idlePollMs = 1_000;
@@ -53,7 +52,7 @@ async function processNextRun() {
     if (!run) throw new Error(`Provider run ${providerRunId} has no audio`);
     if (run.provider !== "valsea") throw new Error(`Unsupported provider: ${run.provider}`);
 
-    const [audioBytes] = await storage.bucket(env.GCS_AUDIO_BUCKET).file(run.objectKey).download();
+    const audioBytes = await downloadAudio(run.objectKey);
     const startedAt = performance.now();
     const result = await valsea.transcribe({
       audio: audioBytes,

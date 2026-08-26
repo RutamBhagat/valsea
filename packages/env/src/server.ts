@@ -12,23 +12,13 @@ export const env = createEnv({
     GOOGLE_CLIENT_ID: nonEmptyString,
     GOOGLE_CLIENT_SECRET: nonEmptyString,
     VALSEA_API_KEY: nonEmptyString,
-    GCP_PROJECT_ID: v.optional(nonEmptyString, "valsea-local"),
-    GCP_REGION: v.optional(nonEmptyString, "us-west1"),
-    GCS_AUDIO_BUCKET: v.optional(nonEmptyString, "valsea-local-audio"),
-    FLOCI_GCP_ENDPOINT: v.optional(v.pipe(v.string(), v.url()), "http://localhost:4580"),
+    R2_ACCOUNT_ID: nonEmptyString,
+    R2_ACCESS_KEY_ID: nonEmptyString,
+    R2_SECRET_ACCESS_KEY: nonEmptyString,
+    R2_AUDIO_BUCKET: v.optional(nonEmptyString, "valsea-audio"),
     NODE_ENV: v.optional(v.picklist(["development", "production", "test"]), "development"),
   },
   runtimeEnv: process.env,
   skipValidation: !!process.env.SKIP_ENV_VALIDATION,
   emptyStringAsUndefined: true,
 });
-
-const pulumiInjectedEnv = ["GCP_PROJECT_ID", "GCP_REGION", "GCS_AUDIO_BUCKET"] as const;
-
-if (env.NODE_ENV === "production") {
-  for (const key of pulumiInjectedEnv) {
-    if (!process.env[key]) {
-      throw new Error(`${key} must be set in production`);
-    }
-  }
-}

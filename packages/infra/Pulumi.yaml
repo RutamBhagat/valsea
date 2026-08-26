@@ -1,4 +1,4 @@
 name: valsea
 runtime: bun
 main: index.ts
-description: Google Cloud infrastructure for the VALSEA transcription comparison backend
+description: Compute infrastructure for the VALSEA transcription comparison backend

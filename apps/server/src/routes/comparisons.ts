@@ -1,9 +1,8 @@
 import { db, eq } from "@valsea/db";
 import { audio, comparisonRun, providerRun } from "@valsea/db/schema/index";
-import { env } from "@valsea/env/server";
 import { Elysia, t } from "elysia";
 
-import { storage } from "../lib/gcp";
+import { uploadAudio } from "../lib/r2";
 
 const supportedAudioTypes = [
   "audio/flac",
@@ -24,10 +23,7 @@ export const comparisonRoutes = new Elysia().post(
     const objectKey = `audio/${audioId}`;
     const bytes = Buffer.from(await uploadedAudio.arrayBuffer());
 
-    await storage.bucket(env.GCS_AUDIO_BUCKET).file(objectKey).save(bytes, {
-      contentType: uploadedAudio.type,
-      resumable: false,
-    });
+    await uploadAudio(objectKey, bytes, uploadedAudio.type);
 
     db.transaction((tx) => {
       tx.insert(audio)
