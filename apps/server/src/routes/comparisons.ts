@@ -19,20 +19,6 @@ const supportedAudioTypes = [
 export const comparisonRoutes = new Elysia().post(
   "/comparisons",
   async ({ body: { audio: uploadedAudio } }) => {
-    if (env.NODE_ENV === "production") {
-      const requiredTaskTargetEnv = [
-        "CLOUD_TASKS_QUEUE",
-        "TASK_INVOKER_SERVICE_ACCOUNT_EMAIL",
-        "WORKER_URL",
-      ] as const;
-
-      for (const key of requiredTaskTargetEnv) {
-        if (!process.env[key]) {
-          throw new Error(`${key} must be injected by Pulumi in production`);
-        }
-      }
-    }
-
     const audioId = crypto.randomUUID();
     const comparisonRunId = crypto.randomUUID();
     const providerRunId = crypto.randomUUID();
@@ -62,7 +48,7 @@ export const comparisonRoutes = new Elysia().post(
     ]);
 
     const parent = cloudTasks.queuePath(env.GCP_PROJECT_ID, env.GCP_REGION, env.CLOUD_TASKS_QUEUE);
-    const targetUrl = new URL("/internal/tasks/transcribe", env.WORKER_URL).toString();
+    const targetUrl = new URL("/internal/tasks/transcribe", env.TASK_TARGET_URL).toString();
     const payload = Buffer.from(JSON.stringify({ providerRunId })).toString("base64");
 
     await cloudTasks.createTask({
@@ -76,7 +62,7 @@ export const comparisonRoutes = new Elysia().post(
           body: payload,
           oidcToken: {
             serviceAccountEmail: env.TASK_INVOKER_SERVICE_ACCOUNT_EMAIL,
-            audience: env.WORKER_URL,
+            audience: env.TASK_TARGET_URL,
           },
         },
       },

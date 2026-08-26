@@ -2,9 +2,12 @@ import { and, db, eq } from "@valsea/db";
 import { audio, comparisonRun, providerRun } from "@valsea/db/schema/index";
 import { env } from "@valsea/env/server";
 import { Elysia, t } from "elysia";
+import { OAuth2Client } from "google-auth-library";
 
 import { storage } from "../lib/gcp";
 import { valsea } from "../providers/valsea";
+
+const googleAuth = new OAuth2Client();
 
 export const taskRoutes = new Elysia({ prefix: "/internal/tasks" }).post(
   "/transcribe",
@@ -95,6 +98,33 @@ export const taskRoutes = new Elysia({ prefix: "/internal/tasks" }).post(
     }
   },
   {
+    beforeHandle: async ({ headers, status }) => {
+      if (env.NODE_ENV !== "production") return;
+
+      const token = headers.authorization?.match(/^Bearer (.+)$/i)?.[1];
+      if (!token) {
+        return status(401, {
+          type: "task_authentication_failed",
+          message: "A task identity token is required",
+        });
+      }
+
+      try {
+        const ticket = await googleAuth.verifyIdToken({
+          idToken: token,
+          audience: env.TASK_TARGET_URL,
+        });
+
+        if (ticket.getPayload()?.email !== env.TASK_INVOKER_SERVICE_ACCOUNT_EMAIL) {
+          throw new Error("Unexpected task identity");
+        }
+      } catch {
+        return status(401, {
+          type: "task_authentication_failed",
+          message: "The task identity token is invalid",
+        });
+      }
+    },
     body: t.Object({ providerRunId: t.String({ format: "uuid" }) }),
     detail: {
       summary: "Execute one queued transcription provider run",

@@ -22,7 +22,7 @@ export const env = createEnv({
       nonEmptyString,
       "valsea-task-invoker@floci-local.iam.gserviceaccount.com",
     ),
-    WORKER_URL: v.optional(v.pipe(v.string(), v.url()), "http://localhost:3000"),
+    TASK_TARGET_URL: v.optional(v.pipe(v.string(), v.url()), "http://localhost:3000"),
     FLOCI_GCP_ENDPOINT: v.optional(v.pipe(v.string(), v.url()), "http://localhost:4588"),
     NODE_ENV: v.optional(v.picklist(["development", "production", "test"]), "development"),
   },
@@ -31,7 +31,14 @@ export const env = createEnv({
   emptyStringAsUndefined: true,
 });
 
-const pulumiInjectedEnv = ["GCP_PROJECT_ID", "GCP_REGION", "GCS_AUDIO_BUCKET"] as const;
+const pulumiInjectedEnv = [
+  "GCP_PROJECT_ID",
+  "GCP_REGION",
+  "GCS_AUDIO_BUCKET",
+  "CLOUD_TASKS_QUEUE",
+  "TASK_INVOKER_SERVICE_ACCOUNT_EMAIL",
+  "TASK_TARGET_URL",
+] as const;
 
 if (env.NODE_ENV === "production") {
   for (const key of pulumiInjectedEnv) {
