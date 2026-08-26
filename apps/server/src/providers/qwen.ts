@@ -16,6 +16,7 @@ export const qwen: TranscriptionProvider = {
         "Modal-Secret": env.MODAL_PROXY_TOKEN_SECRET,
       },
       body: Buffer.from(audio),
+      signal: AbortSignal.timeout(5 * 60_000),
     });
 
     if (!response.ok) {

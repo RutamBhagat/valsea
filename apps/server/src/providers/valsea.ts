@@ -10,10 +10,13 @@ const client = new OpenAI({
 
 export const valsea: TranscriptionProvider = {
   async transcribe({ audio, filename, contentType }) {
-    const result = await client.audio.transcriptions.create({
-      file: await toFile(audio, filename, { type: contentType }),
-      model: "valsea-transcribe",
-    });
+    const result = await client.audio.transcriptions.create(
+      {
+        file: await toFile(audio, filename, { type: contentType }),
+        model: "valsea-transcribe",
+      },
+      { signal: AbortSignal.timeout(2 * 60_000) },
+    );
 
     return { text: result.text };
   },

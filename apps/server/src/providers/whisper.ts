@@ -26,6 +26,7 @@ export const whisper: TranscriptionProvider = {
           audio: Buffer.from(audio).toString("base64"),
           task: "transcribe",
         }),
+        signal: AbortSignal.timeout(2 * 60_000),
       },
     );
 
