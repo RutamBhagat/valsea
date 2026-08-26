@@ -1,10 +1,10 @@
 services:
   app:
-    image: valsea-app:latest
+    image: valsea-app:current
     restart: unless-stopped
-    env_file: .env
+    env_file: server.env
     ports:
-      - "127.0.0.1:3000:3000"
+      - "8001:3000"
     volumes:
       - /var/lib/valsea:/data
     mem_limit: 700m

@@ -1,4 +1,4 @@
-name: Deploy server
+name: Deploy server to OCI
 
 on:
   push:
@@ -6,51 +6,116 @@ on:
     paths:
       - "apps/server/**"
       - "packages/auth/**"
+      - "packages/config/**"
       - "packages/db/**"
       - "packages/env/**"
       - "deploy/**"
-      - "package.json"
       - "bun.lock"
+      - "package.json"
       - ".github/workflows/deploy-server.yml"
   workflow_dispatch:
 
 concurrency:
-  group: production-server
+  group: deploy-server-production
   cancel-in-progress: false
 
+permissions:
+  contents: read
+  id-token: write
+
 jobs:
-  deploy:
+  verify:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      - run: bun run check
+      - run: bun run build
 
-      - name: Build image
-        run: docker build -f apps/server/Dockerfile -t valsea-app:latest .
+  deploy:
+    needs: verify
+    runs-on: ubuntu-24.04-arm
+    environment: production
+    env:
+      OCI_HOST: a1
+      OCI_USER: ${{ secrets.OCI_USER }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build production image
+        run: |
+          docker build \
+            --file apps/server/Dockerfile \
+            --label "org.opencontainers.image.revision=${{ github.sha }}" \
+            --tag "valsea-app:${{ github.sha }}" \
+            .
+
+      - name: Connect to Tailscale
+        uses: tailscale/github-action@v4
+        with:
+          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          audience: ${{ secrets.TS_AUDIENCE }}
+          tags: tag:ci
+          ping: a1
 
       - name: Configure SSH
-        env:
-          VM_HOST: ${{ secrets.VM_HOST }}
-          VM_SSH_PRIVATE_KEY: ${{ secrets.VM_SSH_PRIVATE_KEY }}
         run: |
           install -m 700 -d ~/.ssh
-          printf '%s\n' "$VM_SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519
-          chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan -H "$VM_HOST" >> ~/.ssh/known_hosts
+          cat >> ~/.ssh/config <<'EOF'
+          Host a1
+            User ubuntu
+            StrictHostKeyChecking accept-new
+          EOF
 
-      - name: Upload deployment files and environment
-        env:
-          VM_HOST: ${{ secrets.VM_HOST }}
-          VM_USER: ${{ vars.VM_USER || 'deploy' }}
-          PRODUCTION_ENV: ${{ secrets.PRODUCTION_ENV }}
+      - name: Transfer release
         run: |
-          ssh "$VM_USER@$VM_HOST" 'mkdir -p /opt/valsea'
-          tar -C deploy -cf - docker-compose.yml | ssh "$VM_USER@$VM_HOST" 'tar -C /opt/valsea -xf -'
-          printf '%s' "$PRODUCTION_ENV" | ssh "$VM_USER@$VM_HOST" 'cat > /opt/valsea/.env && chmod 600 /opt/valsea/.env'
+          docker save "valsea-app:${{ github.sha }}" |
+            ssh "$OCI_USER@$OCI_HOST" 'sudo docker load'
+          ssh "$OCI_USER@$OCI_HOST" 'sudo install -d -m 755 /opt/valsea'
+          scp deploy/docker-compose.yml "$OCI_USER@$OCI_HOST:/tmp/valsea-compose.yml"
+          ssh "$OCI_USER@$OCI_HOST" \
+            'sudo mv /tmp/valsea-compose.yml /opt/valsea/docker-compose.yml'
 
-      - name: Upload image and restart services
-        env:
-          VM_HOST: ${{ secrets.VM_HOST }}
-          VM_USER: ${{ vars.VM_USER || 'deploy' }}
+      - name: Deploy release
         run: |
-          docker save valsea-app:latest | gzip -1 | ssh "$VM_USER@$VM_HOST" 'gunzip | docker load'
-          ssh "$VM_USER@$VM_HOST" 'cd /opt/valsea && docker compose up -d --force-recreate --no-build --wait --wait-timeout 60 && docker image prune -af'
+          ssh "$OCI_USER@$OCI_HOST" \
+            'bash -s' -- "${{ github.sha }}" <<'DEPLOY'
+          set -euo pipefail
+
+          release_id="$1"
+          root=/opt/valsea
+          image="valsea-app:$release_id"
+          current_image=valsea-app:current
+          previous_image=valsea-app:previous
+
+          sudo test -r "$root/server.env"
+          sudo install -d -m 777 /var/lib/valsea
+          sudo docker image inspect "$image" >/dev/null
+
+          if sudo docker image inspect "$current_image" >/dev/null 2>&1; then
+            sudo docker image rm "$previous_image" >/dev/null 2>&1 || true
+            sudo docker tag "$current_image" "$previous_image"
+          fi
+
+          sudo docker image rm "$current_image" >/dev/null 2>&1 || true
+          sudo docker tag "$image" "$current_image"
+
+          cd "$root"
+          sudo docker compose --env-file server.env up -d --force-recreate
+
+          for _ in $(seq 1 12); do
+            if curl --fail --silent http://127.0.0.1:8001/ >/dev/null; then
+              exit 0
+            fi
+            sleep 5
+          done
+
+          sudo docker compose logs --tail 100
+          if sudo docker image inspect "$previous_image" >/dev/null 2>&1; then
+            sudo docker image rm "$current_image" >/dev/null 2>&1 || true
+            sudo docker tag "$previous_image" "$current_image"
+            sudo docker compose --env-file server.env up -d --force-recreate || true
+          fi
+          exit 1
+          DEPLOY

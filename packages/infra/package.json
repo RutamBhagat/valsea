@@ -5,15 +5,10 @@
   "scripts": {
     "check-types": "tsc --noEmit",
     "dev": "alchemy dev",
-    "preview": "pulumi preview",
-    "deploy": "pulumi up",
-    "destroy": "pulumi destroy",
-    "deploy:web": "alchemy deploy",
-    "destroy:web": "alchemy destroy"
+    "deploy": "alchemy deploy --yes",
+    "destroy": "alchemy destroy --yes"
   },
   "dependencies": {
-    "@pulumi/gcp": "^9.35.1",
-    "@pulumi/pulumi": "^3.259.0",
     "dotenv": "catalog:"
   },
   "devDependencies": {

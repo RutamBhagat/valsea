@@ -1,72 +1,74 @@
-# VALSEA transcription comparison
+# Valsea
+
+Valsea compares audio transcriptions from VALSEA, Cloudflare Workers AI Whisper Large V3 Turbo, and Qwen3-ASR-1.7B on Modal. The repository contains a TanStack Start web application, an Elysia server, shared authentication and database packages, and the Cloudflare web deployment definition.
+
+## Requirements
+
+- Bun 1.4 or later
+- Docker with Docker Compose
+- A Cloudflare R2 bucket
 
 ## Local development
 
-Copy the server environment, add bucket-scoped R2 credentials, and start the app:
-
 ```bash
+bun install
 cp apps/server/.env.example apps/server/.env
+cp apps/web/.env.example apps/web/.env
+bun run db:push
 bun run dev
 ```
 
-Local development uses the remote R2 bucket. SQLite data is stored in `.data/valsea.sqlite`.
+The API listens on `http://localhost:3000`. The web application listens on `http://localhost:3001`.
 
-## Production infrastructure
+Production web application: https://app-valsea.rutam.dpdns.org
 
-The backend runs on one Compute Engine `e2-micro` VM. Pulumi creates:
+Required server variables are documented in `apps/server/.env.example`. Keep all provider credentials in the server environment. The browser must not receive them.
 
-- One 30 GB boot disk for the OS, SQLite, Docker, and 2 GB swap.
-- An IPv6-only subnet and external IPv6 address. It does not assign a public IPv4 address.
-- An IPv6 SSH firewall rule. The app only listens on VM localhost until a tunnel is added.
+## API documentation
 
-Configure Pulumi with the SSH public key that matches the CI private key:
+- Local OpenAPI UI: `http://localhost:3000/openapi`
+- Production OpenAPI UI: https://valsea.rutam.dpdns.org/openapi
+- Production OpenAPI JSON: https://valsea.rutam.dpdns.org/openapi/json
+
+## Production deployment
+
+The server runs as an ARM64 Docker container on the OCI `a1` VM. OCI Load Balancer terminates TLS and routes `valsea.rutam.dpdns.org` to port `8001` on the VM. Cloudflare provides proxied DNS for that hostname.
+
+Provision `/opt/valsea/server.env` on `a1` before the first deployment. Use these production origins:
+
+```env
+BETTER_AUTH_URL=https://valsea.rutam.dpdns.org
+CORS_ORIGIN=<deployed-web-origin>
+```
+
+`.github/workflows/deploy-server.yml` performs these operations:
+
+1. Run the repository checks and build.
+2. Build the ARM64 server image on a native ARM GitHub runner.
+3. connect to `a1` through Tailscale.
+4. Transfer the image and Compose file over SSH.
+5. Replace the running container and verify `http://127.0.0.1:8001/`.
+6. Restore the previous image if the health check fails.
+
+Configure the GitHub `production` environment with:
+
+- `OCI_USER`
+- `TS_OAUTH_CLIENT_ID`
+- `TS_AUDIENCE`
+
+The Tailscale OAuth client must permit the `tag:ci` device tag. The tailnet policy must permit `tag:ci` to reach `a1` on TCP port 22.
+
+## Web deployment
+
+The Cloudflare web deployment remains in `packages/infra/alchemy.run.ts` and does not provision OCI resources:
 
 ```bash
-cd packages/infra
-pulumi stack init dev
-pulumi config set gcp:project "$GCP_PROJECT_ID"
-pulumi config set gcp:region us-west1
-pulumi config set sshUsername deploy
-pulumi config set sshPublicKey "$(cat ~/.ssh/oci-eu-frankfurt.pub)"
-pulumi up
+VITE_SERVER_URL=https://valsea.rutam.dpdns.org bun run deploy
 ```
 
-Limit SSH to a known IPv6 CIDR when possible:
+## Checks
 
 ```bash
-pulumi config set --path 'sshSourceRanges[0]' '2001:db8::1/128'
+bun run check
+bun run build
 ```
-
-The `serverIpv6` Pulumi output is the VM external IPv6 address. Add the Cloudflare Tunnel separately and target `http://localhost:3000`.
-
-## CI deployment
-
-The server workflow builds the Docker image in GitHub Actions, streams it to the VM through SSH, and recreates the Compose services. It does not use an image registry or retain rollback images.
-
-Set these GitHub Actions secrets:
-
-- `VM_HOST`: an SSH endpoint that can reach the VM.
-- `VM_SSH_PRIVATE_KEY`: the private key for the configured SSH public key.
-- `PRODUCTION_ENV`: the complete production environment file.
-
-Set the optional `VM_USER` repository variable when the SSH user is not `deploy`.
-
-GitHub-hosted runners do not provide direct IPv6 connectivity. Set `VM_HOST` to the SSH subdomain after you add it. A Cloudflare-proxied SSH hostname also requires a `cloudflared` SSH proxy configuration in CI; a subdomain alone does not proxy port 22.
-
-Use this structure for `PRODUCTION_ENV`:
-
-```dotenv
-NODE_ENV=production
-BETTER_AUTH_SECRET=replace-with-at-least-32-characters
-BETTER_AUTH_URL=https://api.example.com
-CORS_ORIGIN=https://app.example.com
-GOOGLE_CLIENT_ID=
-GOOGLE_CLIENT_SECRET=
-VALSEA_API_KEY=
-R2_ACCOUNT_ID=90bd6cb4a52826832b4e83b162620d66
-R2_ACCESS_KEY_ID=
-R2_SECRET_ACCESS_KEY=
-R2_AUDIO_BUCKET=valsea-audio
-```
-
-Create an R2 API token with Object Read & Write access limited to the `valsea-audio` bucket. Use its Access Key ID and Secret Access Key for the two R2 credential values.

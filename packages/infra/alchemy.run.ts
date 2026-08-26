@@ -16,6 +16,7 @@ export default Alchemy.Stack(
   Effect.gen(function* () {
     const webWorker = yield* Cloudflare.Website.Vite("web", {
       rootDir: "../../apps/web",
+      domain: "app-valsea.rutam.dpdns.org",
       compatibility: {
         flags: ["nodejs_compat"],
       },

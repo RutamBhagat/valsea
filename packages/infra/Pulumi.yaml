@@ -1,4 +1,0 @@
-name: valsea
-runtime: bun
-main: index.ts
-description: Compute infrastructure for the VALSEA transcription comparison backend
