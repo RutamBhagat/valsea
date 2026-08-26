@@ -4,6 +4,8 @@ import { useState } from "react";
 import { api } from "@/lib/api";
 import { getApiErrorMessage } from "@/lib/api-error";
 
+export type ComparisonProviderId = "valsea" | "qwen" | "whisper";
+
 export function useComparison() {
   const [comparisonRunId, setComparisonRunId] = useState<string | null>(null);
 
@@ -32,11 +34,14 @@ export function useComparison() {
   });
 
   const createComparison = useMutation({
-    mutationFn: async (audio: File) => {
-      const { data } = await api.api.comparisons.post({
-        audio,
-        providers: ["valsea", "qwen", "whisper"],
-      });
+    mutationFn: async ({
+      audio,
+      providers,
+    }: {
+      audio: File;
+      providers: ComparisonProviderId[];
+    }) => {
+      const { data } = await api.api.comparisons.post({ audio, providers });
       if (!data) {
         throw new Error("Comparison creation returned no data");
       }

@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Button } from "@valsea/ui/components/button";
+import { Checkbox } from "@valsea/ui/components/checkbox";
 import {
   Card,
   CardAction,
@@ -13,7 +14,7 @@ import { Input } from "@valsea/ui/components/input";
 import { Label } from "@valsea/ui/components/label";
 import { type SubmitEvent, useState } from "react";
 
-import { useComparison } from "@/hooks/use-comparison";
+import { type ComparisonProviderId, useComparison } from "@/hooks/use-comparison";
 
 export const Route = createFileRoute("/_auth/")({
   component: HomeComponent,
@@ -53,7 +54,7 @@ function ProviderResultCard({
   model: string;
   run: ProviderRunView | null;
 }) {
-  const visibleStatus = run?.status ?? (comparisonRunId ? "queued" : "idle");
+  const visibleStatus = run?.status ?? (comparisonRunId ? "not selected" : "idle");
 
   return (
     <Card aria-live="polite" className="h-full">
@@ -66,6 +67,10 @@ function ProviderResultCard({
         {!comparisonRunId ? (
           <p className="text-sm text-muted-foreground">
             Start a comparison to see this provider&apos;s state, transcript, and latency.
+          </p>
+        ) : !run ? (
+          <p className="text-sm text-muted-foreground">
+            This provider was not selected for this comparison.
           </p>
         ) : (
           <>
@@ -107,6 +112,11 @@ function ProviderResultCard({
 
 function HomeComponent() {
   const [audioFile, setAudioFile] = useState<File | null>(null);
+  const [selectedProviders, setSelectedProviders] = useState<ComparisonProviderId[]>([
+    "valsea",
+    "qwen",
+    "whisper",
+  ]);
   const { comparisonRunId, comparison, startComparison, isSubmitting, requestError } =
     useComparison();
 
@@ -116,7 +126,7 @@ function HomeComponent() {
       return;
     }
 
-    startComparison(audioFile);
+    startComparison({ audio: audioFile, providers: selectedProviders });
   };
 
   return (
@@ -130,8 +140,8 @@ function HomeComponent() {
             Compare VALSEA, Qwen, and Whisper on the same audio
           </h1>
           <p className="text-sm leading-6 text-muted-foreground">
-            Upload one supported audio file. Each provider runs independently, and this page follows
-            all three results until they finish.
+            Upload one supported audio file and choose at least two providers. Each selected
+            provider runs independently until it finishes.
           </p>
         </header>
 
@@ -142,7 +152,7 @@ function HomeComponent() {
                 <CardTitle>Audio input</CardTitle>
                 <CardDescription>FLAC, MP4, MP3, OGG, WAV, or WebM.</CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="flex flex-col gap-5">
                 <div className="flex flex-col gap-2">
                   <Label htmlFor="audio-file">Audio file</Label>
                   <Input
@@ -164,10 +174,42 @@ function HomeComponent() {
                     </p>
                   ) : null}
                 </div>
+
+                <fieldset className="flex flex-col gap-3">
+                  <legend className="mb-1 text-sm font-medium">Providers</legend>
+                  {providerDetails.map(({ id, name }) => {
+                    const checked = selectedProviders.includes(id);
+                    const cannotDeselect = checked && selectedProviders.length === 2;
+
+                    return (
+                      <div key={id} className="flex items-center gap-2">
+                        <Checkbox
+                          id={`provider-${id}`}
+                          checked={checked}
+                          disabled={isSubmitting || cannotDeselect}
+                          onCheckedChange={(nextChecked) =>
+                            setSelectedProviders((current) =>
+                              nextChecked
+                                ? current.includes(id)
+                                  ? current
+                                  : [...current, id]
+                                : current.filter((provider) => provider !== id),
+                            )
+                          }
+                        />
+                        <Label htmlFor={`provider-${id}`}>{name}</Label>
+                      </div>
+                    );
+                  })}
+                  <p className="text-xs text-muted-foreground">Select at least two providers.</p>
+                </fieldset>
               </CardContent>
               <CardFooter>
-                <Button type="submit" disabled={!audioFile || isSubmitting}>
-                  {isSubmitting ? "Starting…" : "Compare all three providers"}
+                <Button
+                  type="submit"
+                  disabled={!audioFile || selectedProviders.length < 2 || isSubmitting}
+                >
+                  {isSubmitting ? "Starting…" : "Compare selected providers"}
                 </Button>
               </CardFooter>
             </Card>
