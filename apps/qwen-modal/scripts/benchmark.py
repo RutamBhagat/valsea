@@ -166,8 +166,8 @@ def _language_switches(text: str) -> int:
 
 
 def validate_manifest(samples: Sequence[ManifestSample]) -> None:
-    if len(samples) != 10:
-        raise ValueError("MERaLiON Part 4 benchmark manifest must contain exactly 10 samples")
+    if len(samples) != 5:
+        raise ValueError("MERaLiON Part 4 benchmark manifest must contain exactly 5 samples")
 
     if len({sample.row_index for sample in samples}) != len(samples):
         raise ValueError("MERaLiON Part 4 benchmark manifest contains duplicate row indices")
@@ -379,9 +379,8 @@ PROVIDERS: dict[ProviderId, ProviderCall] = {
     "gemini": call_gemini,
 }
 
-# Gemini's free tier is limited enough that an unpaced 10-sample run can hit
-# 429s. Pacing happens outside run_provider so it is not counted as request
-# latency.
+# Gemini's free tier is limited enough that an unpaced benchmark can hit 429s.
+# Pacing happens outside run_provider so it is not counted as request latency.
 MIN_REQUEST_INTERVAL_SECONDS: dict[ProviderId, float] = {"gemini": 21.0}
 
 

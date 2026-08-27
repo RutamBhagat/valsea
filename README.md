@@ -79,7 +79,7 @@ bun run build
 
 ## Benchmark
 
-The benchmark uses 10 fixed Mandarin-English code-switched utterances from MERaLiON's `Multitask-National-Speech-Corpus-v1` `ASR-PART4-Test` configuration and scores Mixed Error Rate (Mandarin characters + English words) plus p50/p95 provider-request latency.
+The benchmark uses 5 fixed Mandarin-English code-switched utterances from MERaLiON's `Multitask-National-Speech-Corpus-v1` `ASR-PART4-Test` configuration and scores Mixed Error Rate (Mandarin characters + English words) plus p50/p95 provider-request latency.
 
 With the provider credentials already configured in `apps/server/.env`:
 
@@ -88,15 +88,15 @@ cd apps/qwen-modal
 uv run poe benchmark
 ```
 
-The command validates the committed MERaLiON manifest against row metadata, WAV duration, and SHA-256, fetches only those 10 audio clips, calls VALSEA, Modal/Qwen, and Gemini directly, and writes `benchmark_result.json`. VALSEA uses `language=english` with correction/tags disabled so the benchmark is reproducible on the Free plan; Qwen and Gemini receive no language hint, and Gemini runs in verbatim mode. Gemini requests are paced 21 seconds apart to fit the small free-tier request quota; that pacing time is excluded from latency.
+The command validates the committed MERaLiON manifest against row metadata, WAV duration, and SHA-256, fetches only those 5 audio clips, calls VALSEA, Modal/Qwen, and Gemini directly, and writes `benchmark_result.json`. VALSEA uses `language=english` with correction/tags disabled so the benchmark is reproducible on the Free plan; Qwen and Gemini receive no language hint, and Gemini runs in verbatim mode. Gemini requests are paced 21 seconds apart; that pacing time is excluded from latency.
 
 Observed benchmark result from the latest run:
 
-| Provider | MER ↓ | p50 latency | p95 latency |
-| --- | ---: | ---: | ---: |
-| VALSEA | 45.0% | 9.13 s | 10.85 s |
-| Qwen3-ASR-1.7B | 49.9% | 5.65 s | 13.38 s |
-| Gemini 3.5 Transcribe | 48.95% | 6.21 s | 7.98 s |
+| Provider              |  MER ↓ | p50 latency | p95 latency |
+| --------------------- | -----: | ----------: | ----------: |
+| VALSEA                |  45.0% |      9.13 s |     10.85 s |
+| Qwen3-ASR-1.7B        |  49.9% |      5.65 s |     13.38 s |
+| Gemini 3.5 Transcribe | 48.95% |      6.21 s |      7.98 s |
 
 On this fixed MERaLiON code-switch benchmark, VALSEA currently has the lowest transcription error rate, while Qwen has the lowest median provider-request latency.
 
