@@ -5,15 +5,8 @@
     {
       "idx": 0,
       "version": "6",
-      "when": 1787728555706,
-      "tag": "0000_clumsy_colossus",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "6",
-      "when": 1787771703467,
-      "tag": "0001_replace_whisper_with_gemini",
+      "when": 1788017345114,
+      "tag": "0000_smooth_silver_sable",
       "breakpoints": true
     }
   ]

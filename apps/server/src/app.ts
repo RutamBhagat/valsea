@@ -5,10 +5,8 @@ import { env } from "@valsea/env/server";
 import { Elysia, t } from "elysia";
 
 import { apiRoutes } from "./routes/api";
-import { transcriptionWorker } from "./worker";
 
 export const app = new Elysia()
-  .use(transcriptionWorker)
   .use(
     openapi({
       path: "/openapi",

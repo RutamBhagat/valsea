@@ -12,7 +12,7 @@ import {
 } from "@valsea/ui/components/card";
 import { Input } from "@valsea/ui/components/input";
 import { Label } from "@valsea/ui/components/label";
-import { type SubmitEvent, useState } from "react";
+import { type SubmitEvent, useEffect, useState } from "react";
 
 import { type ComparisonProviderId, useComparison } from "@/hooks/use-comparison";
 
@@ -37,7 +37,7 @@ const providerDetails = [
 ] as const;
 
 type ProviderRunView = {
-  status: "queued" | "running" | "succeeded" | "failed";
+  status: "succeeded" | "failed";
   transcript: string | null;
   latencyMs: number | null;
   error: string | null;
@@ -48,13 +48,16 @@ function ProviderResultCard({
   name,
   model,
   run,
+  pending,
 }: {
   comparisonRunId: string | null;
   name: string;
   model: string;
   run: ProviderRunView | null;
+  pending: boolean;
 }) {
-  const visibleStatus = run?.status ?? (comparisonRunId ? "not selected" : "idle");
+  const visibleStatus =
+    run?.status ?? (pending ? "running" : comparisonRunId ? "not selected" : "idle");
 
   return (
     <Card aria-live="polite" className="h-full">
@@ -64,9 +67,13 @@ function ProviderResultCard({
         <CardAction className="font-mono text-xs text-muted-foreground">{visibleStatus}</CardAction>
       </CardHeader>
       <CardContent className="flex flex-col gap-5">
-        {!comparisonRunId ? (
+        {pending ? (
           <p className="text-sm text-muted-foreground">
-            Start a comparison to see this provider&apos;s state, transcript, and latency.
+            {name} is transcribing the uploaded audio.
+          </p>
+        ) : !comparisonRunId ? (
+          <p className="text-sm text-muted-foreground">
+            Start a comparison to see this provider&apos;s transcript and latency.
           </p>
         ) : !run ? (
           <p className="text-sm text-muted-foreground">
@@ -95,13 +102,7 @@ function ProviderResultCard({
                 <p className="text-sm text-destructive">
                   {run.error || "The transcription provider failed."}
                 </p>
-              ) : (
-                <p className="text-sm text-muted-foreground">
-                  {visibleStatus === "running"
-                    ? `${name} is transcribing the uploaded audio.`
-                    : "Waiting for the asynchronous worker to start this provider run."}
-                </p>
-              )}
+              ) : null}
             </div>
           </>
         )}
@@ -112,6 +113,7 @@ function ProviderResultCard({
 
 function HomeComponent() {
   const [audioFile, setAudioFile] = useState<File | null>(null);
+  const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [selectedProviders, setSelectedProviders] = useState<ComparisonProviderId[]>([
     "valsea",
     "qwen",
@@ -119,6 +121,18 @@ function HomeComponent() {
   ]);
   const { comparisonRunId, comparison, startComparison, isSubmitting, requestError } =
     useComparison();
+
+  useEffect(() => {
+    if (!audioFile) {
+      setAudioUrl(null);
+      return;
+    }
+
+    const nextAudioUrl = URL.createObjectURL(audioFile);
+    setAudioUrl(nextAudioUrl);
+
+    return () => URL.revokeObjectURL(nextAudioUrl);
+  }, [audioFile]);
 
   const handleSubmit = (event: SubmitEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -141,7 +155,7 @@ function HomeComponent() {
           </h1>
           <p className="text-sm leading-6 text-muted-foreground">
             Upload one supported audio file and choose at least two providers. Each selected
-            provider runs independently until it finishes.
+            provider runs concurrently before the comparison is saved.
           </p>
         </header>
 
@@ -164,9 +178,20 @@ function HomeComponent() {
                     onChange={(event) => setAudioFile(event.currentTarget.files?.[0] ?? null)}
                   />
                   {audioFile ? (
-                    <p className="text-xs text-muted-foreground">
-                      {audioFile.name} · {(audioFile.size / 1024 / 1024).toFixed(2)} MB
-                    </p>
+                    <div className="flex flex-col gap-2">
+                      <p className="text-xs text-muted-foreground">
+                        {audioFile.name} · {(audioFile.size / 1024 / 1024).toFixed(2)} MB
+                      </p>
+                      {audioUrl ? (
+                        <audio
+                          aria-label={`Replay ${audioFile.name}`}
+                          className="w-full"
+                          controls
+                          preload="metadata"
+                          src={audioUrl}
+                        />
+                      ) : null}
+                    </div>
                   ) : null}
                   {requestError ? (
                     <p role="alert" className="text-xs text-destructive">
@@ -209,7 +234,7 @@ function HomeComponent() {
                   type="submit"
                   disabled={!audioFile || selectedProviders.length < 2 || isSubmitting}
                 >
-                  {isSubmitting ? "Starting…" : "Compare selected providers"}
+                  {isSubmitting ? "Comparing…" : "Compare selected providers"}
                 </Button>
               </CardFooter>
             </Card>
@@ -224,6 +249,7 @@ function HomeComponent() {
               run={
                 comparison?.providerRuns.find((providerRun) => providerRun.provider === id) ?? null
               }
+              pending={isSubmitting && selectedProviders.includes(id)}
             />
           ))}
         </div>

@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "6ec9cb8d-88fa-4e3f-bdf8-1f3ed4c278cb",
+  "id": "8df2c2fc-cfc2-4215-aac6-e9d047a5bbda",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "account": {
@@ -340,20 +340,13 @@
       "uniqueConstraints": {},
       "checkConstraints": {}
     },
-    "audio": {
-      "name": "audio",
+    "comparison_run": {
+      "name": "comparison_run",
       "columns": {
         "id": {
           "name": "id",
           "type": "text",
           "primaryKey": true,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "objectKey": {
-          "name": "objectKey",
-          "type": "text",
-          "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },
@@ -393,58 +386,9 @@
       "uniqueConstraints": {},
       "checkConstraints": {}
     },
-    "comparison_run": {
-      "name": "comparison_run",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "audioId": {
-          "name": "audioId",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "createdAt": {
-          "name": "createdAt",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": "(cast(unixepoch('subsecond') * 1000 as integer))"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "comparison_run_audioId_audio_id_fk": {
-          "name": "comparison_run_audioId_audio_id_fk",
-          "tableFrom": "comparison_run",
-          "tableTo": "audio",
-          "columnsFrom": ["audioId"],
-          "columnsTo": ["id"],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "checkConstraints": {}
-    },
     "provider_run": {
       "name": "provider_run",
       "columns": {
-        "id": {
-          "name": "id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true,
-          "autoincrement": false
-        },
         "comparisonRunId": {
           "name": "comparisonRunId",
           "type": "text",
@@ -477,7 +421,7 @@
           "name": "latencyMs",
           "type": "integer",
           "primaryKey": false,
-          "notNull": false,
+          "notNull": true,
           "autoincrement": false
         },
         "error": {
@@ -486,29 +430,9 @@
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
-        },
-        "startedAt": {
-          "name": "startedAt",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "completedAt": {
-          "name": "completedAt",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
         }
       },
-      "indexes": {
-        "provider_run_comparison_run_id_provider_unique": {
-          "name": "provider_run_comparison_run_id_provider_unique",
-          "columns": ["comparisonRunId", "provider"],
-          "isUnique": true
-        }
-      },
+      "indexes": {},
       "foreignKeys": {
         "provider_run_comparisonRunId_comparison_run_id_fk": {
           "name": "provider_run_comparisonRunId_comparison_run_id_fk",
@@ -520,7 +444,12 @@
           "onUpdate": "no action"
         }
       },
-      "compositePrimaryKeys": {},
+      "compositePrimaryKeys": {
+        "provider_run_comparisonRunId_provider_pk": {
+          "columns": ["comparisonRunId", "provider"],
+          "name": "provider_run_comparisonRunId_provider_pk"
+        }
+      },
       "uniqueConstraints": {},
       "checkConstraints": {}
     }

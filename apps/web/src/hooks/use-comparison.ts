@@ -23,13 +23,6 @@ export function useComparison() {
 
       return data;
     },
-    refetchInterval: (query) => {
-      const isActive = query.state.data?.providerRuns.some(
-        (run) => run.status === "queued" || run.status === "running",
-      );
-
-      return isActive ? 1500 : false;
-    },
     retry: 1,
   });
 

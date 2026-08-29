@@ -6,7 +6,6 @@ Valsea compares audio transcriptions from VALSEA, Gemini 3.5 Transcribe, and Qwe
 
 - Bun 1.4 or later
 - Docker with Docker Compose
-- A Cloudflare R2 bucket
 
 ## Local development
 

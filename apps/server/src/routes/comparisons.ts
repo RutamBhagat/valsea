@@ -1,9 +1,9 @@
 import { db, eq } from "@valsea/db";
-import { audio, comparisonRun, providerRun } from "@valsea/db/schema/index";
+import { comparisonRun, providerRun } from "@valsea/db/schema/index";
 import { Elysia, t } from "elysia";
 
-import { uploadAudio } from "../lib/r2";
-import type { ProviderId } from "../providers/types";
+import { providers } from "../providers";
+import type { ProviderId, TranscriptionProvider } from "../providers/types";
 
 const supportedAudioTypes = [
   "audio/flac",
@@ -15,36 +15,82 @@ const supportedAudioTypes = [
   "video/webm",
 ];
 
+interface ComparisonDependencies {
+  providers?: Record<ProviderId, TranscriptionProvider>;
+}
+
 // function needed for test do not inline
 export async function createComparison(
   uploadedAudio: File,
   selectedProviders: ProviderId[],
-  storeAudio: typeof uploadAudio = uploadAudio,
+  dependencies: ComparisonDependencies = {},
 ) {
-  const audioId = crypto.randomUUID();
+  const providerRegistry = dependencies.providers ?? providers;
   const comparisonRunId = crypto.randomUUID();
-  const providerRunRows = selectedProviders.map((provider) => ({
-    id: crypto.randomUUID(),
-    comparisonRunId,
-    provider,
-    status: "queued" as const,
-  }));
-  const objectKey = `audio/${audioId}`;
-  const bytes = Buffer.from(await uploadedAudio.arrayBuffer());
+  const bytes = new Uint8Array(await uploadedAudio.arrayBuffer());
 
-  await storeAudio(objectKey, bytes, uploadedAudio.type);
+  const providerRunRows = await Promise.all(
+    selectedProviders.map(async (provider) => {
+      const providerStartedAt = performance.now();
+
+      try {
+        const result = await providerRegistry[provider].transcribe({
+          audio: bytes,
+          filename: uploadedAudio.name,
+          contentType: uploadedAudio.type,
+        });
+        const latencyMs = Math.round(performance.now() - providerStartedAt);
+
+        console.info(
+          JSON.stringify({
+            comparisonRunId,
+            provider,
+            status: "succeeded",
+            latencyMs,
+          }),
+        );
+
+        return {
+          comparisonRunId,
+          provider,
+          status: "succeeded" as const,
+          transcript: result.text,
+          latencyMs,
+          error: null,
+        };
+      } catch {
+        const latencyMs = Math.round(performance.now() - providerStartedAt);
+
+        console.error(
+          JSON.stringify({
+            comparisonRunId,
+            provider,
+            status: "failed",
+            latencyMs,
+          }),
+        );
+
+        return {
+          comparisonRunId,
+          provider,
+          status: "failed" as const,
+          transcript: null,
+          latencyMs,
+          error: "Transcription failed",
+        };
+      }
+    }),
+  );
 
   db.transaction((tx) => {
-    tx.insert(audio)
+    tx.insert(comparisonRun)
       .values({
-        id: audioId,
-        objectKey,
+        id: comparisonRunId,
         filename: uploadedAudio.name,
         contentType: uploadedAudio.type,
         sizeBytes: uploadedAudio.size,
       })
       .run();
-    tx.insert(comparisonRun).values({ id: comparisonRunId, audioId }).run();
     tx.insert(providerRun).values(providerRunRows).run();
   });
 
@@ -75,18 +121,8 @@ export const comparisonRoutes = new Elysia()
     "/comparisons/:id",
     async ({ params: { id }, status }) => {
       const [comparison] = await db
-        .select({
-          id: comparisonRun.id,
-          createdAt: comparisonRun.createdAt,
-          audio: {
-            id: audio.id,
-            filename: audio.filename,
-            contentType: audio.contentType,
-            sizeBytes: audio.sizeBytes,
-          },
-        })
+        .select()
         .from(comparisonRun)
-        .innerJoin(audio, eq(comparisonRun.audioId, audio.id))
         .where(eq(comparisonRun.id, id))
         .limit(1);
 
@@ -99,19 +135,25 @@ export const comparisonRoutes = new Elysia()
 
       const providerRuns = await db
         .select({
-          id: providerRun.id,
           provider: providerRun.provider,
           status: providerRun.status,
           transcript: providerRun.transcript,
           latencyMs: providerRun.latencyMs,
           error: providerRun.error,
-          startedAt: providerRun.startedAt,
-          completedAt: providerRun.completedAt,
         })
         .from(providerRun)
         .where(eq(providerRun.comparisonRunId, id));
 
-      return { ...comparison, providerRuns };
+      return {
+        id: comparison.id,
+        createdAt: comparison.createdAt,
+        audio: {
+          filename: comparison.filename,
+          contentType: comparison.contentType,
+          sizeBytes: comparison.sizeBytes,
+        },
+        providerRuns,
+      };
     },
     {
       params: t.Object({ id: t.String({ format: "uuid" }) }),
