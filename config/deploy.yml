@@ -16,7 +16,7 @@ builder:
 
 proxy:
   host: valsea.rutam.dpdns.org
-  app_port: 8001
+  app_port: 3000
   forward_headers: true
   ssl:
     certificate_pem: CLOUDFLARE_ORIGIN_CERTIFICATE
