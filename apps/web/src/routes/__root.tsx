@@ -4,6 +4,7 @@ import "@fontsource-variable/geist-mono/wght.css";
 import { QueryClientProvider, type QueryClient } from "@tanstack/react-query";
 import { HeadContent, Outlet, Scripts, createRootRouteWithContext } from "@tanstack/react-router";
 import { Toaster } from "@valsea/ui/components/sonner";
+import { TooltipProvider } from "@valsea/ui/components/tooltip";
 
 import appCss from "../index.css?url";
 
@@ -46,10 +47,12 @@ function RootDocument() {
       </head>
       <body>
         <QueryClientProvider client={queryClient}>
-          <div className="min-h-svh">
-            <Outlet />
-          </div>
-          <Toaster theme="light" richColors />
+          <TooltipProvider>
+            <div className="min-h-svh">
+              <Outlet />
+            </div>
+            <Toaster theme="light" richColors />
+          </TooltipProvider>
         </QueryClientProvider>
         <Scripts />
       </body>

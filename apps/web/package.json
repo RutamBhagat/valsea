@@ -24,6 +24,7 @@
     "lucide-react": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:",
+    "react-dropzone": "^20.1.1",
     "sonner": "catalog:",
     "tailwindcss": "catalog:"
   },
