@@ -53,7 +53,7 @@ CORS_ORIGIN=<deployed-web-origin>
 5. Replace the running container and verify `http://127.0.0.1:8001/`.
 6. Restore the previous image if the health check fails.
 
-Configure these GitHub repository secrets:
+Configure these GitHub repository secrets. The deploy job targets the `production` environment so its GitHub OIDC subject matches the Tailscale trust credential:
 
 - `OCI_USER`
 - `TS_OAUTH_CLIENT_ID`
