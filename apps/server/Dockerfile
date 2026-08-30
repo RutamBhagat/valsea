@@ -7,6 +7,12 @@ RUN --mount=type=cache,target=/root/.bun/install/cache bun install
 
 ENV NODE_ENV=production
 RUN cd apps/server && bun run build
+RUN mkdir -p /artifacts && \
+  if [ -f apps/qwen-modal/benchmark_result.json ]; then \
+    cp apps/qwen-modal/benchmark_result.json /artifacts/benchmark_result.json; \
+  else \
+    : > /artifacts/benchmark_result.json; \
+  fi
 
 FROM oven/bun:1 AS runner
 WORKDIR /app
@@ -23,6 +29,7 @@ RUN --mount=type=cache,target=/root/.bun/install/cache bun install --production 
 
 COPY --from=builder /app/apps/server/dist/index.mjs ./apps/server/dist/index.mjs
 COPY --from=builder /app/packages/db/src/migrations ./migrations
+COPY --from=builder /artifacts/benchmark_result.json /app/apps/qwen-modal/benchmark_result.json
 
 EXPOSE 3000
 WORKDIR /app/apps/server

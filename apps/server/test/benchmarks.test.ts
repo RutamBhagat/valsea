@@ -4,6 +4,7 @@ import { benchmarkRun, comparisonRun, providerRun } from "@valsea/db/schema/inde
 
 import {
   benchmarkRoutes,
+  createBenchmarkRoutes,
   createOrGetActiveBenchmark,
   getBenchmark,
   getHistory,
@@ -21,6 +22,41 @@ function clearRuns() {
 
 beforeEach(clearRuns);
 afterAll(clearRuns);
+
+test("read-only benchmark route returns the committed result", async () => {
+  const committedResult = {
+    manifest_version: 1,
+    dataset: "MERaLiON/Multitask-National-Speech-Corpus-v1",
+    config: "ASR-PART4-Test",
+    split: "train",
+    sample_count: 5,
+    selected_sample_ids: ["part4-0001"],
+    metric: "MER (Mandarin characters + English words)",
+    provider_conditions: { valsea: "language=english" },
+    summary: [],
+    samples: [],
+  };
+  const routes = createBenchmarkRoutes(async () => committedResult);
+
+  const response = await routes.handle(new Request("http://localhost/benchmark"));
+
+  expect(response.status).toBe(200);
+  expect(await response.json()).toEqual(committedResult);
+});
+
+test("read-only benchmark route reports an unavailable committed result", async () => {
+  const routes = createBenchmarkRoutes(async () => {
+    throw new Error("missing");
+  });
+
+  const response = await routes.handle(new Request("http://localhost/benchmark"));
+
+  expect(response.status).toBe(503);
+  expect(await response.json()).toEqual({
+    type: "benchmark_result_unavailable",
+    message: "Committed benchmark result is not available",
+  });
+});
 
 test.serial("benchmark creation uses manifest order and returns the active run", () => {
   const created = createOrGetActiveBenchmark(2);
