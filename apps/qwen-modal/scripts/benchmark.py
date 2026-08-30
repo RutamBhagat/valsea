@@ -29,6 +29,10 @@ DEFAULT_MANIFEST_PATH = PROJECT_DIR / "benchmark_manifest.json"
 DEFAULT_RESULT_PATH = PROJECT_DIR / "benchmark_result.json"
 DEFAULT_ENV_PATH = PROJECT_DIR.parent / "server" / ".env"
 
+MIN_SAMPLE_COUNT = 1
+DEFAULT_SAMPLE_COUNT = 5
+MAX_SAMPLE_COUNT = 10
+
 MERALION_DATASET = "MERaLiON/Multitask-National-Speech-Corpus-v1"
 MERALION_CONFIG = "ASR-PART4-Test"
 MERALION_SPLIT = "train"
@@ -56,6 +60,13 @@ class ManifestSample:
     @property
     def audio_filename(self) -> str:
         return f"{self.sample_id}.wav"
+
+
+@dataclass(frozen=True, slots=True)
+class BenchmarkManifest:
+    version: int
+    default_sample_count: int
+    samples: tuple[ManifestSample, ...]
 
 
 @dataclass(frozen=True, slots=True)
@@ -133,9 +144,32 @@ def require_env(name: str) -> str:
     return value
 
 
-def load_manifest(path: Path) -> list[ManifestSample]:
+def load_manifest(path: Path) -> BenchmarkManifest:
     payload: object = json.loads(path.read_text())
-    raw_samples = _expect_list(payload, "benchmark manifest")
+    manifest = _expect_dict(payload, "benchmark manifest")
+    version = _expect_int(manifest.get("version"), "benchmark manifest version")
+    if version < 1:
+        raise ValueError("benchmark manifest version must be positive")
+
+    expected_source = {
+        "dataset": MERALION_DATASET,
+        "config": MERALION_CONFIG,
+        "split": MERALION_SPLIT,
+    }
+    for field, expected in expected_source.items():
+        actual = _expect_str(manifest.get(field), f"benchmark manifest {field}")
+        if actual != expected:
+            raise ValueError(f"benchmark manifest {field} must be {expected!r}")
+
+    default_sample_count = _expect_int(
+        manifest.get("default_sample_count"), "benchmark manifest default_sample_count"
+    )
+    if default_sample_count != DEFAULT_SAMPLE_COUNT:
+        raise ValueError(
+            f"benchmark manifest default_sample_count must be {DEFAULT_SAMPLE_COUNT}"
+        )
+
+    raw_samples = _expect_list(manifest.get("samples"), "benchmark manifest samples")
     samples: list[ManifestSample] = []
     for index, raw_sample in enumerate(raw_samples):
         item = _expect_dict(raw_sample, f"benchmark manifest item {index}")
@@ -152,7 +186,11 @@ def load_manifest(path: Path) -> list[ManifestSample]:
             )
         )
     validate_manifest(samples)
-    return samples
+    return BenchmarkManifest(
+        version=version,
+        default_sample_count=default_sample_count,
+        samples=tuple(samples),
+    )
 
 
 def _language_switches(text: str) -> int:
@@ -166,8 +204,10 @@ def _language_switches(text: str) -> int:
 
 
 def validate_manifest(samples: Sequence[ManifestSample]) -> None:
-    if len(samples) != 5:
-        raise ValueError("MERaLiON Part 4 benchmark manifest must contain exactly 5 samples")
+    if len(samples) != MAX_SAMPLE_COUNT:
+        raise ValueError(
+            f"MERaLiON Part 4 benchmark manifest must contain exactly {MAX_SAMPLE_COUNT} samples"
+        )
 
     if len({sample.row_index for sample in samples}) != len(samples):
         raise ValueError("MERaLiON Part 4 benchmark manifest contains duplicate row indices")
@@ -447,12 +487,18 @@ def summarize(provider: ProviderId, results: Sequence[ProviderResult]) -> dict[s
 
 
 def result_payload(
-    results: Sequence[ProviderResult], providers: Sequence[ProviderId]
+    results: Sequence[ProviderResult],
+    providers: Sequence[ProviderId],
+    manifest_version: int,
+    samples: Sequence[ManifestSample],
 ) -> dict[str, object]:
     return {
+        "manifest_version": manifest_version,
         "dataset": MERALION_DATASET,
         "config": MERALION_CONFIG,
         "split": MERALION_SPLIT,
+        "sample_count": len(samples),
+        "selected_sample_ids": [sample.sample_id for sample in samples],
         "metric": "MER (Mandarin characters + English words)",
         "provider_conditions": {
             "valsea": "language=english, correction/tags disabled (Free-tier-compatible routing)",
@@ -484,7 +530,17 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--manifest", type=Path, default=DEFAULT_MANIFEST_PATH)
     parser.add_argument("--output", type=Path, default=DEFAULT_RESULT_PATH)
     parser.add_argument("--env-file", type=Path, default=DEFAULT_ENV_PATH)
-    parser.add_argument("--limit", type=int, default=None)
+    parser.add_argument(
+        "--sample-count",
+        type=int,
+        choices=range(MIN_SAMPLE_COUNT, MAX_SAMPLE_COUNT + 1),
+        default=None,
+        metavar=f"{{{MIN_SAMPLE_COUNT}..{MAX_SAMPLE_COUNT}}}",
+        help=(
+            "number of samples to run from the start of the deterministic manifest "
+            f"(manifest default: {DEFAULT_SAMPLE_COUNT})"
+        ),
+    )
     parser.add_argument(
         "--providers",
         nargs="+",
@@ -500,16 +556,13 @@ def main() -> None:
     manifest_path = cast(Path, args.manifest)
     output_path = cast(Path, args.output)
     env_path = cast(Path, args.env_file)
-    limit = cast(int | None, args.limit)
+    requested_sample_count = cast(int | None, args.sample_count)
     providers = cast(list[ProviderId], args.providers)
     validate_only = cast(bool, args.validate_only)
 
-    samples = load_manifest(manifest_path)
-    if limit is not None:
-        if limit < 1:
-            raise ValueError("--limit must be at least 1")
-        samples = samples[:limit]
-
+    manifest = load_manifest(manifest_path)
+    sample_count = requested_sample_count or manifest.default_sample_count
+    samples = manifest.samples[:sample_count]
     audio_samples = [fetch_audio_sample(sample) for sample in samples]
     if validate_only:
         print(f"Validated {len(audio_samples)} fixed MERaLiON Part 4 code-switching samples")
@@ -533,7 +586,12 @@ def main() -> None:
             print(f"{sample.manifest.sample_id} {provider}: {status}")
 
     output_path.write_text(
-        json.dumps(result_payload(results, providers), ensure_ascii=False, indent=2) + "\n"
+        json.dumps(
+            result_payload(results, providers, manifest.version, samples),
+            ensure_ascii=False,
+            indent=2,
+        )
+        + "\n"
     )
     print(f"Wrote {output_path}")
     failed = [result for result in results if result.error is not None]

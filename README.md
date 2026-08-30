@@ -78,16 +78,18 @@ bun run build
 
 ## Benchmark
 
-The benchmark uses 5 fixed Mandarin-English code-switched utterances from MERaLiON's `Multitask-National-Speech-Corpus-v1` `ASR-PART4-Test` configuration and scores Mixed Error Rate (Mandarin characters + English words) plus p50/p95 provider-request latency.
+The benchmark uses a versioned manifest of 10 fixed Mandarin-English code-switched utterances from MERaLiON's `Multitask-National-Speech-Corpus-v1` `ASR-PART4-Test` configuration. It scores Mixed Error Rate (Mandarin characters + English words) and p50/p95 provider-request latency.
 
 With the provider credentials already configured in `apps/server/.env`:
 
 ```bash
 cd apps/qwen-modal
-uv run poe benchmark
+uv run python scripts/benchmark.py --sample-count 5
 ```
 
-The command validates the committed MERaLiON manifest against row metadata, WAV duration, and SHA-256, fetches only those 5 audio clips, calls VALSEA, Modal/Qwen, and Gemini directly, and writes `benchmark_result.json`. VALSEA uses `language=english` with correction/tags disabled so the benchmark is reproducible on the Free plan; Qwen and Gemini receive no language hint, and Gemini runs in verbatim mode. Gemini requests are paced 21 seconds apart; that pacing time is excluded from latency.
+Set `--sample-count` to an integer from 1 through 10. If you omit it, the command uses the first 5 samples. Selection always follows manifest order.
+
+The command validates the selected samples against row metadata, WAV duration, and SHA-256, calls VALSEA, Modal/Qwen, and Gemini directly, and writes `benchmark_result.json`. The result includes the manifest version and selected sample IDs. VALSEA uses `language=english` with correction/tags disabled so the benchmark is reproducible on the Free plan; Qwen and Gemini receive no language hint, and Gemini runs in verbatim mode. Gemini requests are paced 21 seconds apart; that pacing time is excluded from latency.
 
 Observed benchmark result from the latest run:
 

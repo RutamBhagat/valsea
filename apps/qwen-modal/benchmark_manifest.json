@@ -1,32 +1,69 @@
-[
-  {
-    "row_index": 1,
-    "duration_seconds": 20.6205,
-    "audio_sha256": "e4d7990ebcf2e1583dd285c396a2ac44f9bb1464db911aea231731271835be88",
-    "reference": "<Speaker1>: 一样啦全部都不用 take #liao# [mah] but 还好 [lah] 你的 !walao! 我的真的是有点奇怪现在有点 like 不熟了对有点不熟了 (mm) 好像有点奇怪这样 right 因为四年 [mah] like\n<Speaker2>: (mm) 不顺 (mm) (mm) (mm)"
-  },
-  {
-    "row_index": 3,
-    "duration_seconds": 28.736,
-    "audio_sha256": "9130b2f7868f2a70c5ed2b138eb9e3d60d971030ab5c8427e34eaf4c7b888b7f",
-    "reference": "<Speaker1>: (mm)\n<Speaker2>: !wah! like 一整天啊我本来还想 okay 如果是 like 下午的话 then 可能我们早上吃如果是早上的话我们下午回来的时候吃三点半 like 不三不四的时间 [sia]\n<Speaker1>: 是三点半吗等一下我 check\n<Speaker2>: 三点半吧\n<Speaker1>: 不用紧等一下我 check [orh] [orh] 我的 ipad 有 timetable [orh] [orh] [eh] actually 我 end 很早 [eh]\n<Speaker2>: what time\n<Speaker1>: 十二点半\n<Speaker2>: then how come you say"
-  },
-  {
-    "row_index": 11,
-    "duration_seconds": 29.31,
-    "audio_sha256": "1ecd1b0074dcda89c3bc2021780ee437ff51e225ff84d445e48cd3eae362283a",
-    "reference": "<Speaker1>: and I remember the restaurant is quite nice [one]\n<Speaker2>: [oh] vivo city 比较好 right\n<Speaker1>: ya 那边有很多 nice shops\n<Speaker2>: !aiya! raffles city 有点远 acai 是哪里 again\n<Speaker1>: acai 是 holland village\n<Speaker2>: 哦那个比较靠近我们的家\n<Speaker1>: yes but Brotzeit 的是 九块 an hour so is not bad\n<Speaker2>: (um) then weekend 有没有多一点钱"
-  },
-  {
-    "row_index": 22,
-    "duration_seconds": 28.49,
-    "audio_sha256": "dee53673b6ab1a726cb029001a5da5875a2f6cd84037caa3605ece3ee94a1540",
-    "reference": "<Speaker1>: as in 不可以这样算 [lah] I mean SAFRA is 肯定比较 cheap 的 [mah] for as in this package [lah] is just that one shot 还三百多四百块可能有点心痛\n<Speaker2>: ya true like GYMMBOXX 也是要一次还很多\n<Speaker1>: I thought GYMMBOXX 也是每个月 like 五十块还是什么\n<Speaker2>: this one I don't know [eh]\n<Speaker1>: [oh]\n<Speaker2>: 五十块"
-  },
-  {
-    "row_index": 47,
-    "duration_seconds": 25.72,
-    "audio_sha256": "0ff17c05967b63a1bec442d3d9df41cd533e7aba358e04d36fcf502a2bb48e4a",
-    "reference": "<Speaker1>: ya 我的这个 biscuit 我以前因为我的奶奶很喜欢放在咖啡还是 like Milo 里面吃所以我所以我看看看我就我就自己来 try actually 是 actually it is quite good [leh] 我就 like from that day 我就 any biscuit 我都拿来丢在 Milo 还是丢在咖啡里面这样吃\n<Speaker2>: [oh] [eh] 那我问你一个 question I very curious are you a fan of Milo or Horlick"
-  }
-]
+{
+  "version": 1,
+  "dataset": "MERaLiON/Multitask-National-Speech-Corpus-v1",
+  "config": "ASR-PART4-Test",
+  "split": "train",
+  "default_sample_count": 5,
+  "samples": [
+    {
+      "row_index": 1,
+      "duration_seconds": 20.6205,
+      "audio_sha256": "e4d7990ebcf2e1583dd285c396a2ac44f9bb1464db911aea231731271835be88",
+      "reference": "<Speaker1>: 一样啦全部都不用 take #liao# [mah] but 还好 [lah] 你的 !walao! 我的真的是有点奇怪现在有点 like 不熟了对有点不熟了 (mm) 好像有点奇怪这样 right 因为四年 [mah] like\n<Speaker2>: (mm) 不顺 (mm) (mm) (mm)"
+    },
+    {
+      "row_index": 3,
+      "duration_seconds": 28.736,
+      "audio_sha256": "9130b2f7868f2a70c5ed2b138eb9e3d60d971030ab5c8427e34eaf4c7b888b7f",
+      "reference": "<Speaker1>: (mm)\n<Speaker2>: !wah! like 一整天啊我本来还想 okay 如果是 like 下午的话 then 可能我们早上吃如果是早上的话我们下午回来的时候吃三点半 like 不三不四的时间 [sia]\n<Speaker1>: 是三点半吗等一下我 check\n<Speaker2>: 三点半吧\n<Speaker1>: 不用紧等一下我 check [orh] [orh] 我的 ipad 有 timetable [orh] [orh] [eh] actually 我 end 很早 [eh]\n<Speaker2>: what time\n<Speaker1>: 十二点半\n<Speaker2>: then how come you say"
+    },
+    {
+      "row_index": 11,
+      "duration_seconds": 29.31,
+      "audio_sha256": "1ecd1b0074dcda89c3bc2021780ee437ff51e225ff84d445e48cd3eae362283a",
+      "reference": "<Speaker1>: and I remember the restaurant is quite nice [one]\n<Speaker2>: [oh] vivo city 比较好 right\n<Speaker1>: ya 那边有很多 nice shops\n<Speaker2>: !aiya! raffles city 有点远 acai 是哪里 again\n<Speaker1>: acai 是 holland village\n<Speaker2>: 哦那个比较靠近我们的家\n<Speaker1>: yes but Brotzeit 的是 九块 an hour so is not bad\n<Speaker2>: (um) then weekend 有没有多一点钱"
+    },
+    {
+      "row_index": 22,
+      "duration_seconds": 28.49,
+      "audio_sha256": "dee53673b6ab1a726cb029001a5da5875a2f6cd84037caa3605ece3ee94a1540",
+      "reference": "<Speaker1>: as in 不可以这样算 [lah] I mean SAFRA is 肯定比较 cheap 的 [mah] for as in this package [lah] is just that one shot 还三百多四百块可能有点心痛\n<Speaker2>: ya true like GYMMBOXX 也是要一次还很多\n<Speaker1>: I thought GYMMBOXX 也是每个月 like 五十块还是什么\n<Speaker2>: this one I don't know [eh]\n<Speaker1>: [oh]\n<Speaker2>: 五十块"
+    },
+    {
+      "row_index": 47,
+      "duration_seconds": 25.72,
+      "audio_sha256": "0ff17c05967b63a1bec442d3d9df41cd533e7aba358e04d36fcf502a2bb48e4a",
+      "reference": "<Speaker1>: ya 我的这个 biscuit 我以前因为我的奶奶很喜欢放在咖啡还是 like Milo 里面吃所以我所以我看看看我就我就自己来 try actually 是 actually it is quite good [leh] 我就 like from that day 我就 any biscuit 我都拿来丢在 Milo 还是丢在咖啡里面这样吃\n<Speaker2>: [oh] [eh] 那我问你一个 question I very curious are you a fan of Milo or Horlick"
+    },
+    {
+      "row_index": 4,
+      "duration_seconds": 27.38,
+      "audio_sha256": "9106300a3abba10ddf6a0a67727eccf26547560e767f16b832727c69f657e018",
+      "reference": "<Speaker1>: most important thing about 炒面 is you have to remember the most important thing is 那个档口的 sambal must be good\n<Speaker2>: !aiya! !aiya! 可是我没有吃过很多地方的 sambal nice [leh] I think [ah] the most important [one] is the 的炒米粉 炒米粉 is the ingredient the secret ingredient\n<Speaker1>: your 炒米 [eh] got"
+    },
+    {
+      "row_index": 31,
+      "duration_seconds": 29.6491875,
+      "audio_sha256": "941158172173ad7626b32b8637e051fecdd41eb45a79977f447ea3c6c9749348",
+      "reference": "<Speaker1>: (mm) sorry\n<Speaker2>: who do you want to become\n<Speaker1>: (err) the rock\n<Speaker2>: [oh] fast and furious 的那个啊 it's correct\n<Speaker1>: #jumanji# 的那个\n<Speaker2>: ya [lah] fast and furious 他也 he also act in fast and furious\n<Speaker1>: [oh] 是咯 [oh] 对那个最新的那个 episode 是吗\n<Speaker2>: 不是 fast and furious is the movie\n<Speaker1>: 对啦最新的对啦对最新的 that that latest\n<Speaker2>: one two three four five six seven ya 他不只是 latest 他是 the like main one of the constant actor"
+    },
+    {
+      "row_index": 68,
+      "duration_seconds": 29.55,
+      "audio_sha256": "05c0c8643f182a44a4ae44ba3268f9b14d986592bcacaf334c58a91605046416",
+      "reference": "<Speaker1>: 我会选女儿我觉得女儿比较好 比较 okay [lah] 比较危险 in the sense that 他们比较在社会 you know 会比较 会 dangerous because 女孩子 [mah] 女孩子就是 face 很多 danger in life I think 很闲就是每次 I will constantly worried no 男孩子就是这样了男孩子就是比较男孩子 is the one that is mostly causing causing trouble actually then 女孩子就是 more of like you have to survie you know you have to survive\n<Speaker2>: (mm) (mm)\n<Speaker1>: as as not as a weaker species [ah] but more of"
+    },
+    {
+      "row_index": 76,
+      "duration_seconds": 25.489,
+      "audio_sha256": "f2e92609be0bb2f8da3bd6c121979d6d10fea29bd16fd8cb4fba8f3b9f21411c",
+      "reference": "<Speaker1>: like the one that you always buy those fishball right [ah] you can buy a lot of things then after that (uh) those that dine in 他们也是很多东西吃的 is 不错 [eh] 蛮好吃那时候我去一次 for lunch not bad [ah] 蛮好吃的 可以 try\n<Speaker2>: then 这样子是不是很像经济米粉 I think 我有 #dabao# 一次 then 我用我自己的 #hup# like 自己的 container the tub then 我叫 aunty 给我米粉 then 我自己选一个鸡翅膀跟一个 I don't know seaweed chicken"
+    },
+    {
+      "row_index": 87,
+      "duration_seconds": 27.63,
+      "audio_sha256": "b9ea8c8ed7d7dd377f9433f065f2da6a538b317985e5385227d00a8b2b573dd1",
+      "reference": "<Speaker1>: retirement investment 就是因为以后他们会 take care okay actually 不懂 [lah] actually actually 你不要用孩子 to take care 也是有些人生是 you know is just is just to 生 you know like a bit 闲 also [lah] ya [lor] mummy 都已经靠自己了 mummy 都 like I thought 你帮我点\n<Speaker2>: what kind of investment 你自己没有钱来 take care 自己 retire [meh] ya you know now a days people retire 都是靠自己了了而且父母 [ah] 传宗接代 no you know 现在 [ah] a lot parents [ah] 都已经放弃孩子了自己靠自己 for retirement 了 ya give up on 我们了她 give up on 我们了"
+    }
+  ]
+}
