@@ -25,7 +25,8 @@ from uuid import uuid4
 ProviderId = Literal["valsea", "qwen", "gemini"]
 
 PROJECT_DIR = Path(__file__).resolve().parents[1]
-DEFAULT_MANIFEST_PATH = PROJECT_DIR / "benchmark_manifest.json"
+REPOSITORY_ROOT = PROJECT_DIR.parents[1]
+DEFAULT_MANIFEST_PATH = REPOSITORY_ROOT / "packages" / "benchmark" / "benchmark_manifest.json"
 DEFAULT_RESULT_PATH = PROJECT_DIR / "benchmark_result.json"
 DEFAULT_ENV_PATH = PROJECT_DIR.parent / "server" / ".env"
 

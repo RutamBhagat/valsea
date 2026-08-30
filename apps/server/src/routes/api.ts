@@ -1,6 +1,7 @@
 import { auth } from "@valsea/auth";
 import { Elysia } from "elysia";
 
+import { benchmarkRoutes } from "./benchmarks";
 import { comparisonRoutes } from "./comparisons";
 
 export const apiRoutes = new Elysia({ prefix: "/api" }).guard(
@@ -13,5 +14,5 @@ export const apiRoutes = new Elysia({ prefix: "/api" }).guard(
       }
     },
   },
-  (app) => app.use(comparisonRoutes),
+  (app) => app.use(comparisonRoutes).use(benchmarkRoutes),
 );

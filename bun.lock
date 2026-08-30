@@ -27,6 +27,7 @@
         "@google/genai": "^2.0.0",
         "@sinclair/typebox": "^0.34.52",
         "@valsea/auth": "workspace:*",
+        "@valsea/benchmark": "workspace:*",
         "@valsea/db": "workspace:*",
         "@valsea/env": "workspace:*",
         "better-auth": "catalog:",
@@ -90,6 +91,9 @@
         "@valsea/config": "workspace:*",
         "typescript": "catalog:",
       },
+    },
+    "packages/benchmark": {
+      "name": "@valsea/benchmark",
     },
     "packages/config": {
       "name": "@valsea/config",
@@ -959,6 +963,8 @@
     "@types/yauzl": ["@types/yauzl@2.10.3", "", { "dependencies": { "@types/node": "*" } }, "sha512-oJoftv0LSuaDZE3Le4DbKX+KS9G36NzOeSap90UIK0yMA/NhKJhqlSGtNDORNRaIbQfzjXDrQa0ytJ6mNRGz/Q=="],
 
     "@valsea/auth": ["@valsea/auth@workspace:packages/auth"],
+
+    "@valsea/benchmark": ["@valsea/benchmark@workspace:packages/benchmark"],
 
     "@valsea/config": ["@valsea/config@workspace:packages/config"],
 

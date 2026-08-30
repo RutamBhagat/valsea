@@ -1,0 +1,11 @@
+{
+  "name": "@valsea/benchmark",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "default": "./src/index.ts"
+    },
+    "./manifest.json": "./benchmark_manifest.json"
+  }
+}
