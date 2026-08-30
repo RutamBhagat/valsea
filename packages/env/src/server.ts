@@ -16,6 +16,7 @@ export const env = createEnv({
     QWEN_MODAL_URL: v.pipe(v.string(), v.url()),
     MODAL_PROXY_TOKEN_ID: nonEmptyString,
     MODAL_PROXY_TOKEN_SECRET: nonEmptyString,
+    BENCHMARK_RESULT_PATH: v.optional(nonEmptyString, "../qwen-modal/benchmark_result.json"),
     NODE_ENV: v.optional(v.picklist(["development", "production", "test"]), "development"),
   },
   runtimeEnv: process.env,

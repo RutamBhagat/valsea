@@ -6,70 +6,28 @@ import {
   providerRun,
   type BenchmarkResultJson,
 } from "@valsea/db/schema/index";
+import { Value } from "@sinclair/typebox/value";
+import { env } from "@valsea/env/server";
 import { Elysia, t } from "elysia";
 import { resolve } from "node:path";
 
+import {
+  benchmarkResultUnavailableSchema,
+  committedBenchmarkResultSchema,
+  type CommittedBenchmarkResult,
+} from "../schemas/benchmarks";
+
 const DEFAULT_SAMPLE_COUNT = 5;
-const DEFAULT_RESULT_PATH = resolve(process.cwd(), "../qwen-modal/benchmark_result.json");
-
-export type CommittedBenchmarkResult = {
-  manifest_version: number;
-  dataset: string;
-  config: string;
-  split: string;
-  sample_count: number;
-  selected_sample_ids: string[];
-  metric: string;
-  provider_conditions: Record<string, string>;
-  summary: Array<{
-    provider: string;
-    mixed_error_rate: number | null;
-    p50_latency_ms: number | null;
-    p95_latency_ms: number | null;
-    succeeded: number;
-    failed: number;
-  }>;
-  samples: Array<{
-    provider: string;
-    sample_id: string;
-    reference: string;
-    prediction: string | null;
-    latency_ms: number;
-    error_rate: number | null;
-    error: string | null;
-  }>;
-};
-
-function isCommittedBenchmarkResult(value: unknown): value is CommittedBenchmarkResult {
-  if (!value || typeof value !== "object") return false;
-
-  const result = value as Partial<CommittedBenchmarkResult>;
-  return (
-    Number.isInteger(result.manifest_version) &&
-    Number.isInteger(result.sample_count) &&
-    Array.isArray(result.selected_sample_ids) &&
-    typeof result.metric === "string" &&
-    !!result.provider_conditions &&
-    typeof result.provider_conditions === "object" &&
-    Array.isArray(result.summary) &&
-    Array.isArray(result.samples)
-  );
-}
 
 export async function loadCommittedBenchmarkResult(
-  resultPath = process.env.BENCHMARK_RESULT_PATH ?? DEFAULT_RESULT_PATH,
+  resultPath = resolve(env.BENCHMARK_RESULT_PATH),
 ): Promise<CommittedBenchmarkResult> {
   const file = Bun.file(resultPath);
   if (!(await file.exists())) {
     throw new Error("Committed benchmark result is not available");
   }
 
-  const result: unknown = await file.json();
-  if (!isCommittedBenchmarkResult(result)) {
-    throw new Error("Committed benchmark result has an invalid format");
-  }
-
-  return result;
+  return Value.Parse(committedBenchmarkResultSchema, await file.json());
 }
 
 export function createOrGetActiveBenchmark(sampleCount = DEFAULT_SAMPLE_COUNT) {
@@ -160,6 +118,10 @@ export function createBenchmarkRoutes(
         }
       },
       {
+        response: {
+          200: committedBenchmarkResultSchema,
+          503: benchmarkResultUnavailableSchema,
+        },
         detail: {
           summary: "Get the committed benchmark result",
           tags: ["Benchmarks"],
