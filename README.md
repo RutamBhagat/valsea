@@ -35,31 +35,25 @@ Required server variables are documented in `apps/server/.env.example`. Keep all
 
 ## Production deployment
 
-The server runs as an ARM64 Docker container on the OCI `a1` VM. OCI Load Balancer terminates TLS and routes `valsea.rutam.dpdns.org` to port `8001` on the VM. Cloudflare provides proxied DNS for that hostname.
-
-Provision `/opt/valsea/server.env` on `a1` before the first deployment. Use these production origins:
-
-```env
-BETTER_AUTH_URL=https://valsea.rutam.dpdns.org
-CORS_ORIGIN=<deployed-web-origin>
-```
+The server runs as an ARM64 Docker container on the OCI `a1` VM. Cloudflare sends proxied traffic for `valsea.rutam.dpdns.org` to the VM's reserved public IP. Kamal 2 and `kamal-proxy` provide deployment, origin TLS, health checks, and gapless container replacement. SQLite data stays in `/var/lib/valsea`.
 
 `.github/workflows/deploy-server.yml` performs these operations:
 
-1. Run the repository checks and build.
-2. Build the ARM64 server image on a native ARM GitHub runner.
-3. connect to `a1` through Tailscale.
-4. Transfer the image and Compose file over SSH.
-5. Replace the running container and verify `http://127.0.0.1:8001/`.
-6. Restore the previous image if the health check fails.
+1. Run the repository checks.
+2. Build a `linux/arm64` image with the immutable Git commit SHA.
+3. Push the image to `ghcr.io/rutambhagat/valsea`.
+4. Connect to `a1` through Tailscale.
+5. Run `kamal deploy --skip-push --version "$GITHUB_SHA"`.
 
-Configure these GitHub repository secrets. The deploy job targets the `production` environment so its GitHub OIDC subject matches the Tailscale trust credential:
+The deploy job uses the `production` environment. Configure the application variables from `apps/server/.env.example` and these deployment secrets in that environment:
 
-- `OCI_USER`
+- `A1_SSH_KNOWN_HOSTS`
+- `CLOUDFLARE_ORIGIN_CERTIFICATE`
+- `CLOUDFLARE_ORIGIN_PRIVATE_KEY`
 - `TS_OAUTH_CLIENT_ID`
 - `TS_AUDIENCE`
 
-The Tailscale OAuth client must permit the `tag:ci` device tag. The tailnet policy must permit `tag:ci` to reach `a1` on TCP port 22.
+The workflow uses its short-lived `GITHUB_TOKEN` for GHCR. The Tailscale OAuth client must permit the `tag:ci` device tag. The tailnet policy must permit `tag:ci` to reach `a1` on TCP port 22.
 
 ## Web deployment
 

@@ -11,6 +11,7 @@ RUN cd apps/server && bun run build
 FROM oven/bun:1 AS runner
 WORKDIR /app
 ENV NODE_ENV=production
+LABEL service="valsea"
 
 COPY package.json bun.lock ./
 COPY apps/server/package.json ./apps/server/package.json

@@ -1,15 +1,17 @@
-name: Deploy server to OCI
+name: Deploy server to OCI with Kamal
 
 on:
   push:
     branches: [main]
     paths:
       - "apps/server/**"
+      - "apps/qwen-modal/benchmark_result.json"
       - "packages/auth/**"
+      - "packages/benchmark/**"
       - "packages/config/**"
       - "packages/db/**"
       - "packages/env/**"
-      - "deploy/**"
+      - "config/deploy.yml"
       - "bun.lock"
       - "package.json"
       - ".github/workflows/deploy-server.yml"
@@ -22,6 +24,11 @@ concurrency:
 permissions:
   contents: read
   id-token: write
+  packages: write
+
+env:
+  IMAGE: ghcr.io/rutambhagat/valsea
+  KAMAL_VERSION: 2.12.0
 
 jobs:
   verify:
@@ -39,7 +46,7 @@ jobs:
       - name: Build
         run: bun run build
       - name: Verify Docker image builds
-        run: docker build --file apps/server/Dockerfile --tag valsea-app:ci .
+        run: docker build --file apps/server/Dockerfile --tag valsea:ci .
       - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
       - name: Check Qwen Modal project
         working-directory: apps/qwen-modal
@@ -51,19 +58,27 @@ jobs:
     needs: verify
     runs-on: ubuntu-24.04-arm
     environment: production
-    env:
-      OCI_HOST: a1
-      OCI_USER: ${{ secrets.OCI_USER }}
     steps:
       - uses: actions/checkout@v4
 
-      - name: Build production image
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push immutable ARM64 image
         run: |
           docker build \
             --file apps/server/Dockerfile \
+            --label "service=valsea" \
+            --label "org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}" \
             --label "org.opencontainers.image.revision=${{ github.sha }}" \
-            --tag "valsea-app:${{ github.sha }}" \
+            --platform linux/arm64 \
+            --tag "$IMAGE:${{ github.sha }}" \
             .
+          docker push "$IMAGE:${{ github.sha }}"
 
       - name: Connect to Tailscale
         uses: tailscale/github-action@v4
@@ -73,63 +88,74 @@ jobs:
           tags: tag:ci
           ping: a1
 
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.4"
+
+      - name: Install pinned Kamal
+        run: gem install kamal --version "$KAMAL_VERSION" --no-document
+
       - name: Configure SSH
+        env:
+          A1_SSH_KNOWN_HOSTS: ${{ secrets.A1_SSH_KNOWN_HOSTS }}
         run: |
           install -m 700 -d ~/.ssh
-          cat >> ~/.ssh/config <<'EOF'
+          printf '%s\n' "$A1_SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+          cat > ~/.ssh/config <<'EOF'
           Host a1
             User ubuntu
-            StrictHostKeyChecking accept-new
+            StrictHostKeyChecking yes
           EOF
+          chmod 600 ~/.ssh/config
 
-      - name: Transfer release
+      - name: Configure Kamal secrets
+        env:
+          KAMAL_REGISTRY_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+          BETTER_AUTH_SECRET: ${{ secrets.BETTER_AUTH_SECRET }}
+          BETTER_AUTH_URL: ${{ secrets.BETTER_AUTH_URL }}
+          CORS_ORIGIN: ${{ secrets.CORS_ORIGIN }}
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+          VALSEA_API_KEY: ${{ secrets.VALSEA_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          QWEN_MODAL_URL: ${{ secrets.QWEN_MODAL_URL }}
+          MODAL_PROXY_TOKEN_ID: ${{ secrets.MODAL_PROXY_TOKEN_ID }}
+          MODAL_PROXY_TOKEN_SECRET: ${{ secrets.MODAL_PROXY_TOKEN_SECRET }}
+          CLOUDFLARE_ORIGIN_CERTIFICATE: ${{ secrets.CLOUDFLARE_ORIGIN_CERTIFICATE }}
+          CLOUDFLARE_ORIGIN_PRIVATE_KEY: ${{ secrets.CLOUDFLARE_ORIGIN_PRIVATE_KEY }}
         run: |
-          docker save "valsea-app:${{ github.sha }}" |
-            ssh "$OCI_USER@$OCI_HOST" 'sudo docker load'
-          ssh "$OCI_USER@$OCI_HOST" 'sudo install -d -m 755 /opt/valsea'
-          scp deploy/docker-compose.yml "$OCI_USER@$OCI_HOST:/tmp/valsea-compose.yml"
-          ssh "$OCI_USER@$OCI_HOST" \
-            'sudo mv /tmp/valsea-compose.yml /opt/valsea/docker-compose.yml'
+          install -m 700 -d .kamal
+          cat > .kamal/secrets <<'EOF'
+          KAMAL_REGISTRY_PASSWORD=$KAMAL_REGISTRY_PASSWORD
+          BETTER_AUTH_SECRET=$BETTER_AUTH_SECRET
+          BETTER_AUTH_URL=$BETTER_AUTH_URL
+          CORS_ORIGIN=$CORS_ORIGIN
+          GOOGLE_CLIENT_ID=$GOOGLE_CLIENT_ID
+          GOOGLE_CLIENT_SECRET=$GOOGLE_CLIENT_SECRET
+          VALSEA_API_KEY=$VALSEA_API_KEY
+          GEMINI_API_KEY=$GEMINI_API_KEY
+          QWEN_MODAL_URL=$QWEN_MODAL_URL
+          MODAL_PROXY_TOKEN_ID=$MODAL_PROXY_TOKEN_ID
+          MODAL_PROXY_TOKEN_SECRET=$MODAL_PROXY_TOKEN_SECRET
+          CLOUDFLARE_ORIGIN_CERTIFICATE=$CLOUDFLARE_ORIGIN_CERTIFICATE
+          CLOUDFLARE_ORIGIN_PRIVATE_KEY=$CLOUDFLARE_ORIGIN_PRIVATE_KEY
+          EOF
+          chmod 600 .kamal/secrets
 
-      - name: Deploy release
-        run: |
-          ssh "$OCI_USER@$OCI_HOST" \
-            'bash -s' -- "${{ github.sha }}" <<'DEPLOY'
-          set -euo pipefail
-
-          release_id="$1"
-          root=/opt/valsea
-          image="valsea-app:$release_id"
-          current_image=valsea-app:current
-          previous_image=valsea-app:previous
-
-          sudo test -r "$root/server.env"
-          sudo install -d -m 777 /var/lib/valsea
-          sudo docker image inspect "$image" >/dev/null
-
-          if sudo docker image inspect "$current_image" >/dev/null 2>&1; then
-            sudo docker image rm "$previous_image" >/dev/null 2>&1 || true
-            sudo docker tag "$current_image" "$previous_image"
-          fi
-
-          sudo docker image rm "$current_image" >/dev/null 2>&1 || true
-          sudo docker tag "$image" "$current_image"
-
-          cd "$root"
-          sudo docker compose --env-file server.env up -d --force-recreate
-
-          for _ in $(seq 1 12); do
-            if curl --fail --silent http://127.0.0.1:8001/ >/dev/null; then
-              exit 0
-            fi
-            sleep 5
-          done
-
-          sudo docker compose logs --tail 100
-          if sudo docker image inspect "$previous_image" >/dev/null 2>&1; then
-            sudo docker image rm "$current_image" >/dev/null 2>&1 || true
-            sudo docker tag "$previous_image" "$current_image"
-            sudo docker compose --env-file server.env up -d --force-recreate || true
-          fi
-          exit 1
-          DEPLOY
+      - name: Deploy existing image with Kamal
+        env:
+          KAMAL_REGISTRY_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+          BETTER_AUTH_SECRET: ${{ secrets.BETTER_AUTH_SECRET }}
+          BETTER_AUTH_URL: ${{ secrets.BETTER_AUTH_URL }}
+          CORS_ORIGIN: ${{ secrets.CORS_ORIGIN }}
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+          VALSEA_API_KEY: ${{ secrets.VALSEA_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          QWEN_MODAL_URL: ${{ secrets.QWEN_MODAL_URL }}
+          MODAL_PROXY_TOKEN_ID: ${{ secrets.MODAL_PROXY_TOKEN_ID }}
+          MODAL_PROXY_TOKEN_SECRET: ${{ secrets.MODAL_PROXY_TOKEN_SECRET }}
+          CLOUDFLARE_ORIGIN_CERTIFICATE: ${{ secrets.CLOUDFLARE_ORIGIN_CERTIFICATE }}
+          CLOUDFLARE_ORIGIN_PRIVATE_KEY: ${{ secrets.CLOUDFLARE_ORIGIN_PRIVATE_KEY }}
+        run: kamal deploy --skip-push --version "${GITHUB_SHA}"

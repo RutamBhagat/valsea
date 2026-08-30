@@ -38,6 +38,13 @@ export const app = new Elysia()
     return status(405);
   })
   .use(apiRoutes)
+  .get("/healthz", () => "OK" as const, {
+    detail: {
+      summary: "Check server health",
+      tags: ["Health"],
+    },
+    response: t.Literal("OK"),
+  })
   .get("/", () => "OK" as const, {
     detail: {
       summary: "Check server health",
