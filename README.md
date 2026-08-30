@@ -17,7 +17,7 @@ bun run db:push
 bun run dev
 ```
 
-The API listens on `http://localhost:3000`. The web application listens on `http://localhost:3001`.
+The API listens on `http://localhost:8001`. The web application listens on `http://localhost:3001`.
 
 Production web application: https://app-valsea.rutam.dpdns.org
 
@@ -29,7 +29,7 @@ Required server variables are documented in `apps/server/.env.example`. Keep all
 
 ## API documentation
 
-- Local OpenAPI UI: `http://localhost:3000/openapi`
+- Local OpenAPI UI: `http://localhost:8001/openapi`
 - Production OpenAPI UI: https://valsea.rutam.dpdns.org/openapi
 - Production OpenAPI JSON: https://valsea.rutam.dpdns.org/openapi/json
 

@@ -27,7 +27,7 @@ COPY --from=builder /app/apps/server/dist/index.mjs ./apps/server/dist/index.mjs
 COPY --from=builder /app/packages/db/src/migrations ./migrations
 COPY --from=builder /app/apps/qwen-modal/benchmark_result.json /app/apps/qwen-modal/benchmark_result.json
 
-EXPOSE 3000
+EXPOSE 8001
 WORKDIR /app/apps/server
 USER bun
 CMD ["bun", "dist/index.mjs"]

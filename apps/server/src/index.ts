@@ -4,8 +4,8 @@ import { app } from "./app";
 
 migrateDatabase();
 
-app.listen(3000, () => {
-  console.log("Server is running on http://localhost:3000");
+app.listen(8001, () => {
+  console.log("Server is running on http://localhost:8001");
 });
 
 const shutdown = () => {
