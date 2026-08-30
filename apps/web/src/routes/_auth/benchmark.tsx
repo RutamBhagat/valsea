@@ -183,7 +183,7 @@ function BenchmarkRoute() {
                           <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                             Reference
                           </h3>
-                          <p className="text-sm leading-6">
+                          <p className="wrap-break-word text-sm leading-6">
                             {reference ?? "Reference unavailable."}
                           </p>
                         </div>
@@ -211,11 +211,11 @@ function BenchmarkRoute() {
                                   </span>
                                 </div>
                                 {failed ? (
-                                  <p className="text-sm leading-6 text-destructive">
+                                  <p className="wrap-break-word text-sm leading-6 text-destructive">
                                     {run?.error ?? "No saved result for this provider."}
                                   </p>
                                 ) : (
-                                  <p className="whitespace-pre-wrap text-sm leading-6">
+                                  <p className="wrap-break-word whitespace-pre-wrap text-sm leading-6">
                                     {run.prediction || "The provider returned an empty transcript."}
                                   </p>
                                 )}
