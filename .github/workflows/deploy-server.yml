@@ -12,6 +12,7 @@ on:
       - "packages/db/**"
       - "packages/env/**"
       - "config/deploy.yml"
+      - ".dockerignore"
       - "bun.lock"
       - "package.json"
       - ".github/workflows/deploy-server.yml"

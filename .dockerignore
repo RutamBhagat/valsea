@@ -21,8 +21,7 @@ Dockerfile
 **/Dockerfile
 docker-compose.yml
 
-# Secrets stay out of image layers; runtime env comes from compose env_file,
-# build-time public values come from compose build args
+# Secrets stay out of image layers; Kamal injects runtime environment values.
 **/.env
 **/.env.*
 !**/.env.example
