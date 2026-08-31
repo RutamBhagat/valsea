@@ -1,4 +1,14 @@
-# Tradeoffs
+<p align="center">
+  <img src="apps/web/public/logo.webp" alt="Valsea" width="128">
+</p>
+
+<h1 align="center">Tradeoffs</h1>
+
+## Backend architecture
+
+![Valsea backend architecture](docs/architecture.png)
+
+## Decisions
 
 - The OCI VM is shared with other applications. This avoids an additional compute deployment, but resource contention or a VM failure can affect all hosted applications.
 - OCI network and Cloudflare DNS resources are configured outside this repository. This keeps application deployment small, but cloud configuration is not reproducible from source.
