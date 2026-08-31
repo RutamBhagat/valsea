@@ -1,4 +1,8 @@
-# Valsea
+<p align="center">
+  <img src="apps/web/public/logo.webp" alt="Valsea" width="128">
+</p>
+
+<h1 align="center">Valsea</h1>
 
 Valsea compares audio transcriptions from VALSEA, Gemini 3.5 Transcribe, and Qwen3-ASR-1.7B on Modal. The repository contains a TanStack Start web application, an Elysia server, shared authentication and database packages, and the Cloudflare web deployment definition.
 
@@ -32,6 +36,12 @@ Required server variables are documented in `apps/server/.env.example`. Keep all
 - Local OpenAPI UI: `http://localhost:3000/openapi`
 - Production OpenAPI UI: https://valsea.rutam.dpdns.org/openapi
 - Production OpenAPI JSON: https://valsea.rutam.dpdns.org/openapi/json
+
+## Backend architecture
+
+The diagram shows the backend request path, external providers, and server deployment flow.
+
+![Valsea backend architecture](docs/architecture.png)
 
 ## Production deployment
 
