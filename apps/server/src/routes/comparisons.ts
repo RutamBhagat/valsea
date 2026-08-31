@@ -6,7 +6,7 @@ import { fileTypeFromBlob } from "file-type";
 import { providers } from "../providers";
 import type { ProviderId, TranscriptionProvider } from "../providers/types";
 
-const maxAudioSizeBytes = 14 * 1024 * 1024;
+const maxAudioSizeBytes = 10_000_000;
 
 const supportedAudioTypes = new Map([
   ["audio/flac", "audio/flac"],

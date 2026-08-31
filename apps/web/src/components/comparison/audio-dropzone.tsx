@@ -3,7 +3,7 @@ import { FileAudioIcon } from "lucide-react";
 import { useCallback, useState } from "react";
 import { type FileRejection, useDropzone } from "react-dropzone";
 
-const maxAudioSizeBytes = 14 * 1024 * 1024;
+const maxAudioSizeBytes = 10_000_000;
 
 const supportedAudioTypes = {
   "audio/flac": [".flac"],
@@ -34,7 +34,7 @@ function DropzoneContent({
 }) {
   let title = "Provide an audio file";
   let description = "Drop it here or click to browse";
-  let footer = "FLAC · M4A · MP3 · OGG · WAV · 14 MB max";
+  let footer = "FLAC · M4A · MP3 · OGG · WAV · 10 MB max";
 
   if (isDragReject) {
     title = "Unsupported audio format";

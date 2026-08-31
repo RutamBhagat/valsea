@@ -14,9 +14,9 @@ export const valsea: TranscriptionProvider = {
       {
         file: await toFile(audio, filename, { type: contentType }),
         model: "valsea-transcribe",
+        language: "english",
         ...(benchmark
           ? {
-              language: "english",
               enable_correction: false,
               enable_tags: false,
             }
