@@ -6,6 +6,10 @@
 
 Valsea compares audio transcriptions from VALSEA, Gemini 3.5 Transcribe, and Qwen3-ASR-1.7B on Modal. The repository contains a TanStack Start web application, an Elysia server, shared authentication and database packages, and the Cloudflare web deployment definition.
 
+## Demo Video
+
+![Demo](https://youtu.be/L-nCA8ie3QQ)
+
 ## Requirements
 
 - Bun 1.4 or later
