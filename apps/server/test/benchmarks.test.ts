@@ -3,7 +3,6 @@ import { db, migrateDatabase } from "@valsea/db";
 import { benchmarkRun, comparisonRun, providerRun } from "@valsea/db/schema/index";
 
 import {
-  benchmarkRoutes,
   createBenchmarkRoutes,
   createOrGetActiveBenchmark,
   getBenchmark,
@@ -75,7 +74,8 @@ test.serial("benchmark creation uses manifest order and returns the active run",
 });
 
 test.serial("benchmark routes validate sample count and return saved progress", async () => {
-  const invalidResponse = await benchmarkRoutes.handle(
+  const routes = createBenchmarkRoutes(undefined, async () => {});
+  const invalidResponse = await routes.handle(
     new Request("http://localhost/benchmarks", {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -84,7 +84,7 @@ test.serial("benchmark routes validate sample count and return saved progress", 
   );
   expect(invalidResponse.status).toBe(422);
 
-  const createResponse = await benchmarkRoutes.handle(
+  const createResponse = await routes.handle(
     new Request("http://localhost/benchmarks", {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -94,7 +94,7 @@ test.serial("benchmark routes validate sample count and return saved progress", 
   expect(createResponse.status).toBe(200);
   const created = (await createResponse.json()) as { benchmarkRunId: string };
 
-  const getResponse = await benchmarkRoutes.handle(
+  const getResponse = await routes.handle(
     new Request(`http://localhost/benchmarks/${created.benchmarkRunId}`),
   );
   const saved = (await getResponse.json()) as {

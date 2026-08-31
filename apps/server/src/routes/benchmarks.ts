@@ -16,8 +16,10 @@ import {
   committedBenchmarkResultSchema,
   type CommittedBenchmarkResult,
 } from "../schemas/benchmarks";
+import { runBenchmark } from "../services/benchmark-runner";
 
 const DEFAULT_SAMPLE_COUNT = 5;
+const activeExecutions = new Set<string>();
 
 export async function loadCommittedBenchmarkResult(
   resultPath = resolve(env.BENCHMARK_RESULT_PATH),
@@ -52,6 +54,7 @@ export function createOrGetActiveBenchmark(sampleCount = DEFAULT_SAMPLE_COUNT) {
     selectedSampleIds,
     sampleCount,
     providerResults: [],
+    summary: [],
     failures: [],
     requestProgress: {
       completed: 0,
@@ -66,6 +69,18 @@ export function createOrGetActiveBenchmark(sampleCount = DEFAULT_SAMPLE_COUNT) {
 
 export function getBenchmark(id: string) {
   return db.select().from(benchmarkRun).where(eq(benchmarkRun.id, id)).limit(1).get();
+}
+
+function startBenchmark(
+  benchmarkRunId: string,
+  executeBenchmark: (benchmarkRunId: string) => Promise<void>,
+) {
+  if (activeExecutions.has(benchmarkRunId)) return;
+  activeExecutions.add(benchmarkRunId);
+
+  queueMicrotask(() => {
+    void executeBenchmark(benchmarkRunId).finally(() => activeExecutions.delete(benchmarkRunId));
+  });
 }
 
 export function getHistory() {
@@ -103,6 +118,7 @@ export function getHistory() {
 
 export function createBenchmarkRoutes(
   loadResult: () => Promise<CommittedBenchmarkResult> = loadCommittedBenchmarkResult,
+  executeBenchmark: (benchmarkRunId: string) => Promise<void> = runBenchmark,
 ) {
   return new Elysia()
     .get(
@@ -130,7 +146,11 @@ export function createBenchmarkRoutes(
     )
     .post(
       "/benchmarks",
-      ({ body }) => createOrGetActiveBenchmark(body.sampleCount ?? DEFAULT_SAMPLE_COUNT),
+      ({ body }) => {
+        const benchmark = createOrGetActiveBenchmark(body.sampleCount ?? DEFAULT_SAMPLE_COUNT);
+        startBenchmark(benchmark.benchmarkRunId, executeBenchmark);
+        return benchmark;
+      },
       {
         body: t.Object({
           sampleCount: t.Optional(
@@ -153,6 +173,10 @@ export function createBenchmarkRoutes(
             type: "benchmark_not_found",
             message: "Benchmark not found",
           });
+        }
+
+        if (run.status === "running") {
+          startBenchmark(run.id, executeBenchmark);
         }
 
         return run;

@@ -3,12 +3,36 @@ import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
 export const benchmarkRunStatuses = ["running", "succeeded", "failed"] as const;
 
+export type BenchmarkProvider = "valsea" | "qwen" | "gemini";
+
+export type BenchmarkProviderResult = {
+  provider: BenchmarkProvider;
+  sampleId: string;
+  reference: string;
+  prediction: string | null;
+  latencyMs: number;
+  errorRate: number | null;
+  error: string | null;
+  edits: number | null;
+  referenceTokens: number | null;
+};
+
+export type BenchmarkSummary = {
+  provider: BenchmarkProvider;
+  mixedErrorRate: number | null;
+  p50LatencyMs: number | null;
+  p95LatencyMs: number | null;
+  succeeded: number;
+  failed: number;
+};
+
 export type BenchmarkResultJson = {
   manifestVersion: number;
   selectedSampleIds: string[];
   sampleCount: number;
-  providerResults: unknown[];
-  failures: unknown[];
+  providerResults: BenchmarkProviderResult[];
+  summary: BenchmarkSummary[];
+  failures: string[];
   requestProgress: {
     completed: number;
     total: number;
