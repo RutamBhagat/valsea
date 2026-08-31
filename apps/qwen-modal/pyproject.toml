@@ -3,10 +3,7 @@ name = "qwen-modal"
 version = "0.1.0"
 description = "Modal-hosted Qwen3 ASR service and benchmark client"
 requires-python = ">=3.12"
-dependencies = [
-    "fastapi>=0.115,<1",
-    "modal>=1.5.4,<2",
-]
+dependencies = ["fastapi>=0.115,<1", "modal>=1.5.4,<2"]
 
 [build-system]
 requires = ["uv_build>=0.11.29,<0.12.0"]
@@ -34,7 +31,4 @@ allowedUntypedLibraries = ["modal"]
 pythonVersion = "3.12"
 
 [dependency-groups]
-dev = [
-    "basedpyright>=1.31.4,<2",
-    "poethepoet>=0.48.0",
-]
+dev = ["basedpyright>=1.31.4,<2", "poethepoet>=0.48.0"]

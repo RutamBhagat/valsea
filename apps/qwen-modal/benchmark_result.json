@@ -4,13 +4,7 @@
   "config": "ASR-PART4-Test",
   "split": "train",
   "sample_count": 5,
-  "selected_sample_ids": [
-    "part4-0001",
-    "part4-0003",
-    "part4-0011",
-    "part4-0022",
-    "part4-0047"
-  ],
+  "selected_sample_ids": ["part4-0001", "part4-0003", "part4-0011", "part4-0022", "part4-0047"],
   "metric": "MER (Mandarin characters + English words)",
   "provider_conditions": {
     "valsea": "language=english, correction/tags disabled (Free-tier-compatible routing)",

@@ -1,18 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import {
-  Card,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@valsea/ui/components/card";
+import { Card, CardDescription, CardHeader, CardTitle } from "@valsea/ui/components/card";
 import { Skeleton } from "@valsea/ui/components/skeleton";
 
-import {
-  BenchmarkResults,
-  type DisplayResult,
-} from "@/components/benchmark/benchmark-results";
+import { BenchmarkResults, type DisplayResult } from "@/components/benchmark/benchmark-results";
 import { BenchmarkRunControls } from "@/components/benchmark/benchmark-run-controls";
 import { useBenchmark } from "@/hooks/use-benchmark";
 import { api } from "@/lib/api";
@@ -38,11 +30,7 @@ function BenchmarkLoading() {
 function getLiveResult(
   benchmark: ReturnType<typeof useBenchmark>["benchmark"],
 ): DisplayResult | null {
-  if (
-    !benchmark ||
-    benchmark.status === "running" ||
-    benchmark.resultJson.summary.length === 0
-  ) {
+  if (!benchmark || benchmark.status === "running" || benchmark.resultJson.summary.length === 0) {
     return null;
   }
 
@@ -57,16 +45,14 @@ function getLiveResult(
 
 function BenchmarkRoute() {
   const [sampleCount, setSampleCount] = useState(5);
-  const { benchmark, startBenchmark, isStarting, requestError } =
-    useBenchmark();
+  const { benchmark, startBenchmark, isStarting, requestError } = useBenchmark();
   const isRunning = benchmark?.status === "running";
 
   const savedBenchmarkQuery = useQuery({
     queryKey: ["committed-benchmark-result"],
     queryFn: async ({ signal }) => {
       const { data } = await api.api.benchmark.get({ fetch: { signal } });
-      if (!data || "type" in data)
-        throw new Error("Saved benchmark result is not available");
+      if (!data || "type" in data) throw new Error("Saved benchmark result is not available");
       return data;
     },
     retry: false,
@@ -103,9 +89,7 @@ function BenchmarkRoute() {
     <main className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
       <header className="flex flex-col gap-5 border-b pb-5 md:flex-row md:items-center md:justify-between">
         <div className="flex flex-col gap-1">
-          <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
-            Benchmark providers
-          </h1>
+          <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Benchmark providers</h1>
         </div>
         <BenchmarkRunControls
           sampleCount={sampleCount}

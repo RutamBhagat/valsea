@@ -3,24 +3,24 @@ import { FileAudioIcon } from "lucide-react";
 import { useCallback, useState } from "react";
 import { type FileRejection, useDropzone } from "react-dropzone";
 
+const maxAudioSizeBytes = 14 * 1024 * 1024;
+
 const supportedAudioTypes = {
   "audio/flac": [".flac"],
-  "audio/mp4": [".m4a", ".mp4"],
+  "audio/mp4": [".m4a"],
   "audio/mpeg": [".mp3"],
   "audio/ogg": [".ogg"],
   "audio/wav": [".wav"],
-  "audio/webm": [".webm"],
-  "video/webm": [".webm"],
+  "audio/x-wav": [".wav"],
 };
 
 const audioTypeLabels: Record<string, string> = {
   "audio/flac": "FLAC",
-  "audio/mp4": "MP4",
+  "audio/mp4": "M4A",
   "audio/mpeg": "MP3",
   "audio/ogg": "OGG",
   "audio/wav": "WAV",
-  "audio/webm": "WEBM",
-  "video/webm": "WEBM",
+  "audio/x-wav": "WAV",
 };
 
 function DropzoneContent({
@@ -34,7 +34,7 @@ function DropzoneContent({
 }) {
   let title = "Provide an audio file";
   let description = "Drop it here or click to browse";
-  let footer = "FLAC · MP3 · MP4 · OGG · WAV · WEBM";
+  let footer = "FLAC · M4A · MP3 · OGG · WAV · 14 MB max";
 
   if (isDragReject) {
     title = "Unsupported audio format";
@@ -91,6 +91,7 @@ export default function AudioDropzone({
     accept: supportedAudioTypes,
     disabled,
     maxFiles: 1,
+    maxSize: maxAudioSizeBytes,
     multiple: false,
     onDrop,
   });

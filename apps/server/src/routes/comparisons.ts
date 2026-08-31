@@ -1,19 +1,21 @@
 import { db, eq } from "@valsea/db";
 import { comparisonRun, providerRun } from "@valsea/db/schema/index";
 import { Elysia, t } from "elysia";
+import { fileTypeFromBlob } from "file-type";
 
 import { providers } from "../providers";
 import type { ProviderId, TranscriptionProvider } from "../providers/types";
 
-const supportedAudioTypes = [
-  "audio/flac",
-  "audio/mp4",
-  "audio/mpeg",
-  "audio/ogg",
-  "audio/wav",
-  "audio/webm",
-  "video/webm",
-];
+const maxAudioSizeBytes = 14 * 1024 * 1024;
+
+const supportedAudioTypes = new Map([
+  ["audio/flac", "audio/flac"],
+  ["audio/mp4", "audio/mp4"],
+  ["audio/x-m4a", "audio/mp4"],
+  ["audio/mpeg", "audio/mpeg"],
+  ["audio/ogg", "audio/ogg"],
+  ["audio/wav", "audio/wav"],
+]);
 
 interface ComparisonDependencies {
   providers?: Record<ProviderId, TranscriptionProvider>;
@@ -100,12 +102,27 @@ export async function createComparison(
 export const comparisonRoutes = new Elysia()
   .post(
     "/comparisons",
-    async ({ body: { audio: uploadedAudio, providers: selectedProviders } }) => {
-      return createComparison(uploadedAudio, selectedProviders);
+    async ({ body: { audio: uploadedAudio, providers: selectedProviders }, status }) => {
+      const detectedType = await fileTypeFromBlob(uploadedAudio);
+
+      const contentType = detectedType ? supportedAudioTypes.get(detectedType.mime) : undefined;
+
+      if (!contentType) {
+        return status(422, {
+          type: "unsupported_audio_type",
+          message: "Unsupported audio format",
+        });
+      }
+
+      const normalizedAudio = new File([uploadedAudio], uploadedAudio.name, {
+        type: contentType,
+      });
+
+      return createComparison(normalizedAudio, selectedProviders);
     },
     {
       body: t.Object({
-        audio: t.File({ type: supportedAudioTypes }),
+        audio: t.File({ maxSize: maxAudioSizeBytes }),
         providers: t.Array(t.UnionEnum(["valsea", "qwen", "gemini"]), {
           minItems: 2,
           uniqueItems: true,

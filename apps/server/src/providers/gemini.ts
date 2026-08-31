@@ -16,7 +16,7 @@ export const gemini: TranscriptionProvider = {
       input: {
         type: "audio",
         data: Buffer.from(audio).toString("base64"),
-        mime_type: contentType === "video/webm" ? "audio/webm" : contentType,
+        mime_type: contentType,
       },
       generation_config: {
         transcription_config: { mode: "verbatim" },
