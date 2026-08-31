@@ -29,6 +29,8 @@ Modal Qwen transcription endpoint: https://rutambhagat-valsea--qwen3-asr-qwenasr
 
 The endpoint requires a Modal proxy token in the `Authorization: Bearer $MODAL_PROXY_TOKEN` header.
 
+Modal uses a serverless deployment to minimize GPU costs. After the Qwen container scales to zero, the next request takes approximately 20 seconds while Modal starts the container and loads the model into GPU memory. Subsequent requests use the warm container and are faster.
+
 Required server variables are documented in `apps/server/.env.example`. Keep all provider credentials in the server environment. The browser must not receive them.
 
 ## API documentation
