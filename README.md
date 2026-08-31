@@ -33,8 +33,6 @@ Modal Qwen transcription endpoint: https://rutambhagat-valsea--qwen3-asr-qwenasr
 
 The endpoint requires a Modal proxy token in the `Authorization: Bearer $MODAL_PROXY_TOKEN` header.
 
-Modal uses a serverless deployment to minimize GPU costs. After the Qwen container scales to zero, the next request takes approximately 20 seconds while Modal starts the container and loads the model into GPU memory. Subsequent requests use the warm container and are faster.
-
 Required server variables are documented in `apps/server/.env.example`. Keep all provider credentials in the server environment. The browser must not receive them.
 
 ## API documentation
@@ -48,6 +46,27 @@ Required server variables are documented in `apps/server/.env.example`. Keep all
 The diagram shows the backend request path, external providers, and server deployment flow.
 
 ![Valsea backend architecture](docs/architecture.png)
+
+## Modal Qwen deployment
+
+`apps/qwen-modal/src/qwen_modal/app.py` defines the Qwen service and its infrastructure in one Python module:
+
+1. Modal builds a Python 3.12 image with FFmpeg, Qwen ASR, and PyTorch.
+2. A persistent Modal Volume is mounted at `/cache`. Hugging Face downloads the model weights to this cache once, so a new container does not download them again.
+3. A Modal class requests one A10G GPU. Its `@modal.enter` hook loads `Qwen/Qwen3-ASR-1.7B` in BF16 and moves it to GPU memory before Modal marks the container as ready.
+4. An authenticated FastAPI endpoint accepts the audio body, runs transcription outside the event loop, and returns the text as JSON.
+
+The deployment sets `max_containers=1` and does not set `min_containers`, so Modal can scale the service to zero when it is idle. This limits GPU cost but adds a cold start. The first request after scale-to-zero takes approximately 20 seconds because Modal must start the container and copy the cached weights into GPU memory. Requests to the same warm container skip initialization and are faster. The one-container limit also queues overlapping requests instead of adding GPU replicas.
+
+Run the service from `apps/qwen-modal`:
+
+```bash
+uv sync
+uv run poe modal-dev     # temporary development endpoint
+uv run poe modal-deploy  # persistent deployment
+```
+
+See Modal's documentation for [container lifecycle hooks](https://modal.com/docs/guide/lifecycle-functions), [model-weight Volumes](https://modal.com/docs/guide/model-weights), and [cold-start controls](https://modal.com/docs/guide/cold-start).
 
 ## Production deployment
 
@@ -84,9 +103,13 @@ bun run check
 bun run build
 ```
 
-## Benchmark
+## Evaluation
 
-The benchmark uses a versioned manifest of 10 fixed Mandarin-English code-switched utterances from MERaLiON's `Multitask-National-Speech-Corpus-v1` `ASR-PART4-Test` configuration. It scores Mixed Error Rate (Mandarin characters + English words) and p50/p95 provider-request latency.
+The evaluation uses a versioned manifest of 10 fixed Mandarin-English code-switched utterances from MERaLiON's `Multitask-National-Speech-Corpus-v1` `ASR-PART4-Test` configuration. Each manifest entry pins the dataset row, reference text, duration, and audio SHA-256. These checks make a run fail if the upstream sample changes.
+
+Mixed Error Rate (MER) measures transcription accuracy across both scripts. The scorer applies NFKC normalization, removes speaker tags, lowercases English, and tokenizes each Mandarin character and each English word. It then calculates Levenshtein edits over the reference tokens. The reported MER is `total edits / total reference tokens` across all successful samples, rather than an average of per-sample percentages.
+
+Latency starts immediately before each provider request and ends when that request returns. It includes a Qwen cold start when one occurs. Gemini's 21-second quota pacing is outside the timer. Failed requests remain in the result but do not contribute to MER or latency percentiles.
 
 With the provider credentials already configured in `apps/server/.env`:
 
