@@ -1,11 +1,19 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { Card, CardDescription, CardHeader, CardTitle } from "@valsea/ui/components/card";
+import {
+  Card,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@valsea/ui/components/card";
 import { Skeleton } from "@valsea/ui/components/skeleton";
 
-import { BenchmarkResults, type DisplayResult } from "@/components/benchmark/benchmark-results";
-import { BenchmarkRunCard } from "@/components/benchmark/benchmark-run-card";
+import {
+  BenchmarkResults,
+  type DisplayResult,
+} from "@/components/benchmark/benchmark-results";
+import { BenchmarkRunControls } from "@/components/benchmark/benchmark-run-controls";
 import { useBenchmark } from "@/hooks/use-benchmark";
 import { api } from "@/lib/api";
 import { getApiErrorMessage } from "@/lib/api-error";
@@ -30,7 +38,11 @@ function BenchmarkLoading() {
 function getLiveResult(
   benchmark: ReturnType<typeof useBenchmark>["benchmark"],
 ): DisplayResult | null {
-  if (!benchmark || benchmark.status === "running" || benchmark.resultJson.summary.length === 0) {
+  if (
+    !benchmark ||
+    benchmark.status === "running" ||
+    benchmark.resultJson.summary.length === 0
+  ) {
     return null;
   }
 
@@ -45,14 +57,16 @@ function getLiveResult(
 
 function BenchmarkRoute() {
   const [sampleCount, setSampleCount] = useState(5);
-  const { benchmark, startBenchmark, isStarting, requestError } = useBenchmark();
+  const { benchmark, startBenchmark, isStarting, requestError } =
+    useBenchmark();
   const isRunning = benchmark?.status === "running";
 
   const savedBenchmarkQuery = useQuery({
     queryKey: ["committed-benchmark-result"],
     queryFn: async ({ signal }) => {
       const { data } = await api.api.benchmark.get({ fetch: { signal } });
-      if (!data || "type" in data) throw new Error("Saved benchmark result is not available");
+      if (!data || "type" in data)
+        throw new Error("Saved benchmark result is not available");
       return data;
     },
     retry: false,
@@ -86,21 +100,14 @@ function BenchmarkRoute() {
   const displayedResult = liveResult ?? savedResult;
 
   return (
-    <main className="overflow-auto">
-      <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-4 py-10 md:px-8 md:py-14">
-        <header className="flex max-w-3xl flex-col gap-3">
-          <p className="font-mono text-xs uppercase tracking-[0.18em] text-muted-foreground">
-            Live evaluation
-          </p>
-          <h1 className="text-3xl font-semibold tracking-tight md:text-4xl">
-            Mandarin-English benchmark
+    <main className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
+      <header className="flex flex-col gap-5 border-b pb-5 md:flex-row md:items-center md:justify-between">
+        <div className="flex flex-col gap-1">
+          <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
+            Benchmark providers
           </h1>
-          <p className="text-sm leading-6 text-muted-foreground">
-            Run all three providers against fixed MERaLiON code-switching samples.
-          </p>
-        </header>
-
-        <BenchmarkRunCard
+        </div>
+        <BenchmarkRunControls
           sampleCount={sampleCount}
           onSampleCountChange={setSampleCount}
           onRun={() => startBenchmark(sampleCount)}
@@ -108,9 +115,11 @@ function BenchmarkRoute() {
           isRunning={isRunning}
           progress={benchmark?.resultJson.requestProgress}
         />
+      </header>
 
+      <div className="flex min-w-0 flex-col gap-8">
         {requestError ? (
-          <Card role="alert" className="max-w-2xl border-destructive/30">
+          <Card role="alert" className="border-destructive/30">
             <CardHeader>
               <CardTitle>Benchmark request failed</CardTitle>
               <CardDescription>{requestError}</CardDescription>
@@ -119,7 +128,7 @@ function BenchmarkRoute() {
         ) : null}
 
         {benchmark?.resultJson.failures.map((failure) => (
-          <Card key={failure} role="alert" className="max-w-2xl border-destructive/30">
+          <Card key={failure} role="alert" className="border-destructive/30">
             <CardHeader>
               <CardTitle>Benchmark failed</CardTitle>
               <CardDescription>{failure}</CardDescription>
@@ -128,18 +137,11 @@ function BenchmarkRoute() {
         ))}
 
         {displayedResult ? (
-          <>
-            <div className="flex flex-wrap gap-x-5 gap-y-1 font-mono text-xs text-muted-foreground">
-              <span>Manifest v{displayedResult.manifestVersion}</span>
-              <span>{displayedResult.sampleCount} selected samples</span>
-              <span>{liveResult ? "latest live run" : "saved baseline"}</span>
-            </div>
-            <BenchmarkResults result={displayedResult} />
-          </>
+          <BenchmarkResults result={displayedResult} />
         ) : savedBenchmarkQuery.isPending ? (
           <BenchmarkLoading />
         ) : savedBenchmarkQuery.isError ? (
-          <Card role="alert" className="max-w-2xl border-destructive/30">
+          <Card role="alert" className="border-destructive/30">
             <CardHeader>
               <CardTitle>Saved result unavailable</CardTitle>
               <CardDescription>
