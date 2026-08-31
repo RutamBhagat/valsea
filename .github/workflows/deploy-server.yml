@@ -1,4 +1,4 @@
-name: Deploy server to OCI with Kamal
+name: Deploy server to OCI with Uncloud
 
 on:
   push:
@@ -11,7 +11,7 @@ on:
       - "packages/config/**"
       - "packages/db/**"
       - "packages/env/**"
-      - "config/deploy.yml"
+      - "compose.yaml"
       - ".dockerignore"
       - "bun.lock"
       - "package.json"
@@ -29,7 +29,7 @@ permissions:
 
 env:
   IMAGE: ghcr.io/rutambhagat/valsea
-  KAMAL_VERSION: 2.12.0
+  UNCLOUD_VERSION: "0.20.0"
 
 jobs:
   verify:
@@ -89,12 +89,16 @@ jobs:
           tags: tag:ci
           ping: a1
 
-      - uses: ruby/setup-ruby@v1
-        with:
-          ruby-version: "3.4"
-
-      - name: Install pinned Kamal
-        run: gem install kamal --version "$KAMAL_VERSION" --no-document
+      - name: Install pinned Uncloud CLI
+        run: |
+          archive="uc_linux_arm64.tar.gz"
+          base="https://github.com/psviderski/uncloud/releases/download/v${UNCLOUD_VERSION}"
+          curl -fsSLO "$base/$archive"
+          curl -fsSLO "$base/checksums.txt"
+          grep " $archive$" checksums.txt | sha256sum --check --strict
+          tar -xzf "$archive"
+          sudo install -m 755 uc /usr/local/bin/uc
+          uc version
 
       - name: Configure SSH
         env:
@@ -110,9 +114,9 @@ jobs:
           EOF
           chmod 600 ~/.ssh/config
 
-      - name: Configure Kamal secrets
+      - name: Deploy with Uncloud
         env:
-          KAMAL_REGISTRY_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+          IMAGE_TAG: ${{ github.sha }}
           BETTER_AUTH_SECRET: ${{ secrets.BETTER_AUTH_SECRET }}
           BETTER_AUTH_URL: ${{ secrets.BETTER_AUTH_URL }}
           CORS_ORIGIN: ${{ secrets.CORS_ORIGIN }}
@@ -123,40 +127,8 @@ jobs:
           QWEN_MODAL_URL: ${{ secrets.QWEN_MODAL_URL }}
           MODAL_PROXY_TOKEN_ID: ${{ secrets.MODAL_PROXY_TOKEN_ID }}
           MODAL_PROXY_TOKEN_SECRET: ${{ secrets.MODAL_PROXY_TOKEN_SECRET }}
-          CLOUDFLARE_ORIGIN_CERTIFICATE: ${{ secrets.CLOUDFLARE_ORIGIN_CERTIFICATE }}
-          CLOUDFLARE_ORIGIN_PRIVATE_KEY: ${{ secrets.CLOUDFLARE_ORIGIN_PRIVATE_KEY }}
-        run: |
-          install -m 700 -d .kamal
-          cat > .kamal/secrets <<'EOF'
-          KAMAL_REGISTRY_PASSWORD=$KAMAL_REGISTRY_PASSWORD
-          BETTER_AUTH_SECRET=$BETTER_AUTH_SECRET
-          BETTER_AUTH_URL=$BETTER_AUTH_URL
-          CORS_ORIGIN=$CORS_ORIGIN
-          GOOGLE_CLIENT_ID=$GOOGLE_CLIENT_ID
-          GOOGLE_CLIENT_SECRET=$GOOGLE_CLIENT_SECRET
-          VALSEA_API_KEY=$VALSEA_API_KEY
-          GEMINI_API_KEY=$GEMINI_API_KEY
-          QWEN_MODAL_URL=$QWEN_MODAL_URL
-          MODAL_PROXY_TOKEN_ID=$MODAL_PROXY_TOKEN_ID
-          MODAL_PROXY_TOKEN_SECRET=$MODAL_PROXY_TOKEN_SECRET
-          CLOUDFLARE_ORIGIN_CERTIFICATE=$CLOUDFLARE_ORIGIN_CERTIFICATE
-          CLOUDFLARE_ORIGIN_PRIVATE_KEY=$CLOUDFLARE_ORIGIN_PRIVATE_KEY
-          EOF
-          chmod 600 .kamal/secrets
+        run: uc deploy --connect a1 --yes
 
-      - name: Deploy existing image with Kamal
-        env:
-          KAMAL_REGISTRY_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
-          BETTER_AUTH_SECRET: ${{ secrets.BETTER_AUTH_SECRET }}
-          BETTER_AUTH_URL: ${{ secrets.BETTER_AUTH_URL }}
-          CORS_ORIGIN: ${{ secrets.CORS_ORIGIN }}
-          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
-          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
-          VALSEA_API_KEY: ${{ secrets.VALSEA_API_KEY }}
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          QWEN_MODAL_URL: ${{ secrets.QWEN_MODAL_URL }}
-          MODAL_PROXY_TOKEN_ID: ${{ secrets.MODAL_PROXY_TOKEN_ID }}
-          MODAL_PROXY_TOKEN_SECRET: ${{ secrets.MODAL_PROXY_TOKEN_SECRET }}
-          CLOUDFLARE_ORIGIN_CERTIFICATE: ${{ secrets.CLOUDFLARE_ORIGIN_CERTIFICATE }}
-          CLOUDFLARE_ORIGIN_PRIVATE_KEY: ${{ secrets.CLOUDFLARE_ORIGIN_PRIVATE_KEY }}
-        run: kamal deploy --skip-push --version "${GITHUB_SHA}"
+      - name: Keep at most one previous application image
+        run: |
+          ssh a1 "repo='$IMAGE'; ids=\$(DOCKER_API_VERSION=1.44 docker image ls \"\$repo\" --format '{{.ID}}' | awk '!seen[\$0]++' | tail -n +3); [ -z \"\$ids\" ] || DOCKER_API_VERSION=1.44 docker image rm --force \$ids"

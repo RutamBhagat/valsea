@@ -1,0 +1,59 @@
+services:
+  valsea:
+    image: ghcr.io/rutambhagat/valsea:${IMAGE_TAG:?IMAGE_TAG is required}
+    pull_policy: missing
+    environment:
+      NODE_ENV: production
+      BETTER_AUTH_SECRET: secret://better_auth_secret
+      BETTER_AUTH_URL: secret://better_auth_url
+      CORS_ORIGIN: secret://cors_origin
+      GOOGLE_CLIENT_ID: secret://google_client_id
+      GOOGLE_CLIENT_SECRET: secret://google_client_secret
+      VALSEA_API_KEY: secret://valsea_api_key
+      GEMINI_API_KEY: secret://gemini_api_key
+      QWEN_MODAL_URL: secret://qwen_modal_url
+      MODAL_PROXY_TOKEN_ID: secret://modal_proxy_token_id
+      MODAL_PROXY_TOKEN_SECRET: secret://modal_proxy_token_secret
+    volumes:
+      - /var/lib/valsea:/data
+    mem_limit: 700m
+    stop_grace_period: 15s
+    healthcheck:
+      test:
+        - CMD
+        - bun
+        - -e
+        - "const r=await fetch('http://127.0.0.1:3000/healthz');if(!r.ok)process.exit(1)"
+      interval: 2s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+      start_interval: 1s
+    deploy:
+      update_config:
+        order: start-first
+        monitor: 30s
+    x-ports:
+      - valsea.rutam.dpdns.org:3000/https
+
+secrets:
+  better_auth_secret:
+    x-command: printenv BETTER_AUTH_SECRET
+  better_auth_url:
+    x-command: printenv BETTER_AUTH_URL
+  cors_origin:
+    x-command: printenv CORS_ORIGIN
+  google_client_id:
+    x-command: printenv GOOGLE_CLIENT_ID
+  google_client_secret:
+    x-command: printenv GOOGLE_CLIENT_SECRET
+  valsea_api_key:
+    x-command: printenv VALSEA_API_KEY
+  gemini_api_key:
+    x-command: printenv GEMINI_API_KEY
+  qwen_modal_url:
+    x-command: printenv QWEN_MODAL_URL
+  modal_proxy_token_id:
+    x-command: printenv MODAL_PROXY_TOKEN_ID
+  modal_proxy_token_secret:
+    x-command: printenv MODAL_PROXY_TOKEN_SECRET

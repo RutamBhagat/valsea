@@ -2,7 +2,8 @@
 
 - The OCI VM is shared with other applications. This avoids an additional compute deployment, but resource contention or a VM failure can affect all hosted applications.
 - OCI network and Cloudflare DNS resources are configured outside this repository. This keeps application deployment small, but cloud configuration is not reproducible from source.
-- Cloudflare stays in front of `kamal-proxy`, which uses a Cloudflare Origin CA certificate. This encrypts origin traffic without exposing the application image or origin certificate publicly, but direct HTTPS access to the VM is not trusted by browsers and certificate rotation requires an updated GitHub environment secret.
+- Cloudflare stays in front of Uncloud Caddy. Caddy now obtains and renews the public origin certificate automatically, but certificate issuance depends on Cloudflare forwarding the ACME HTTP challenge to the VM.
+- Uncloud uses `start-first` updates for VALSEA, so the old and new processes briefly share the SQLite bind mount. WAL mode permits this and avoids deployment downtime, but a schema change that is not backward-compatible with the prior process can fail during the overlap.
 - Audio stays in memory during a comparison. The browser uses a temporary object URL for replay. This removes object storage, but replay is lost after a page refresh and server memory use grows with concurrent upload sizes.
 - Provider calls run concurrently inside the comparison request. This removes background processing and reduces latency, but the request must stay open until the slowest provider finishes. A server restart loses the in-flight comparison, and the user must submit it again.
 - SQLite stores only comparison metadata and final provider results. This keeps the schema small, but it does not retain individual provider start and completion timestamps.

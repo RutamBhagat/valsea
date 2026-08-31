@@ -17,7 +17,6 @@ local.db-*
 # Environment variables
 .env
 .env*.local
-.kamal/secrets*
 
 # IDEs and editors
 .vscode/*

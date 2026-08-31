@@ -35,7 +35,7 @@ Required server variables are documented in `apps/server/.env.example`. Keep all
 
 ## Production deployment
 
-The server runs as an ARM64 Docker container on the OCI `a1` VM. Cloudflare sends proxied traffic for `valsea.rutam.dpdns.org` to the VM's reserved public IP. Kamal 2 and `kamal-proxy` provide deployment, origin TLS, health checks, and gapless container replacement. SQLite data stays in `/var/lib/valsea`.
+The server runs as an ARM64 Docker container on the OCI `a1` VM. Cloudflare sends proxied traffic for `valsea.rutam.dpdns.org` to Uncloud Caddy on the VM. Uncloud performs start-first replacement, gates each release on `/healthz`, and keeps the old healthy container active if the new container fails. SQLite data stays in `/var/lib/valsea`.
 
 `.github/workflows/deploy-server.yml` performs these operations:
 
@@ -43,17 +43,15 @@ The server runs as an ARM64 Docker container on the OCI `a1` VM. Cloudflare send
 2. Build a `linux/arm64` image with the immutable Git commit SHA.
 3. Push the image to `ghcr.io/rutambhagat/valsea`.
 4. Connect to `a1` through Tailscale.
-5. Run `kamal deploy --skip-push --version "$GITHUB_SHA"`.
+5. Run the pinned Uncloud CLI against `a1` with `compose.yaml`.
 
 The deploy job uses the `production` environment. Configure the application variables from `apps/server/.env.example` and these deployment secrets in that environment:
 
 - `A1_SSH_KNOWN_HOSTS`
-- `CLOUDFLARE_ORIGIN_CERTIFICATE`
-- `CLOUDFLARE_ORIGIN_PRIVATE_KEY`
 - `TS_OAUTH_CLIENT_ID`
 - `TS_AUDIENCE`
 
-The workflow uses its short-lived `GITHUB_TOKEN` for GHCR. The Tailscale OAuth client must permit the `tag:ci` device tag. The tailnet policy must permit `tag:ci` to reach `a1` on TCP port 22.
+The workflow uses its short-lived `GITHUB_TOKEN` for GHCR. The Tailscale OAuth client must permit the `tag:ci` device tag. The tailnet policy must permit `tag:ci` to reach `a1` on TCP port 22. Caddy obtains and renews the origin certificate automatically.
 
 ## Web deployment
 
