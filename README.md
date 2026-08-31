@@ -8,7 +8,7 @@ Valsea compares audio transcriptions from VALSEA, Gemini 3.5 Transcribe, and Qwe
 
 ## Demo Video
 
-![Demo](https://youtu.be/L-nCA8ie3QQ)
+[youtu.be/L-nCA8ie3QQ](https://youtu.be/L-nCA8ie3QQ)
 
 ## Requirements
 
