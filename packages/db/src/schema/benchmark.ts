@@ -1,5 +1,7 @@
 import { sql } from "drizzle-orm";
-import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
+
+import { user } from "./auth";
 
 export const benchmarkRunStatuses = ["running", "succeeded", "failed"] as const;
 
@@ -42,10 +44,15 @@ export type BenchmarkResultJson = {
 const timestamp = () => integer({ mode: "timestamp_ms" });
 const now = sql`(cast(unixepoch('subsecond') * 1000 as integer))`;
 
-export const benchmarkRun = sqliteTable("benchmark_run", {
-  id: text().primaryKey(),
-  status: text({ enum: benchmarkRunStatuses }).notNull(),
-  resultJson: text({ mode: "json" }).$type<BenchmarkResultJson>().notNull(),
-  createdAt: timestamp().default(now).notNull(),
-  updatedAt: timestamp().default(now).notNull(),
-});
+export const benchmarkRun = sqliteTable(
+  "benchmark_run",
+  {
+    id: text().primaryKey(),
+    userId: text().references(() => user.id, { onDelete: "cascade" }),
+    status: text({ enum: benchmarkRunStatuses }).notNull(),
+    resultJson: text({ mode: "json" }).$type<BenchmarkResultJson>().notNull(),
+    createdAt: timestamp().default(now).notNull(),
+    updatedAt: timestamp().default(now).notNull(),
+  },
+  (table) => [index("benchmark_run_user_id_idx").on(table.userId)],
+);

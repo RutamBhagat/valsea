@@ -1,16 +1,24 @@
 import { afterAll, afterEach, beforeEach, expect, mock, test } from "bun:test";
 import { db, eq } from "@valsea/db";
-import { comparisonRun, providerRun } from "@valsea/db/schema/index";
+import { comparisonRun, providerRun, user } from "@valsea/db/schema/index";
 
 import type { ProviderId, TranscriptionProvider } from "../src/providers/types";
 import { createComparison } from "../src/routes/comparisons";
+
+const USER_ID = "comparison-user";
 
 function clearComparisons() {
   db.delete(providerRun).run();
   db.delete(comparisonRun).run();
 }
 
-beforeEach(clearComparisons);
+beforeEach(() => {
+  clearComparisons();
+  db.insert(user)
+    .values({ id: USER_ID, name: USER_ID, email: `${USER_ID}@example.com` })
+    .onConflictDoNothing()
+    .run();
+});
 afterAll(clearComparisons);
 
 afterEach(() => {
@@ -40,6 +48,7 @@ test.serial("selected providers run and persist their final results", async () =
   const audio = sampleAudio();
 
   const { comparisonRunId } = await createComparison({
+    userId: USER_ID,
     uploadedAudio: audio,
     selectedProviders: ["valsea", "gemini"],
     dependencies: { providers: registry },
@@ -76,6 +85,7 @@ test.serial("selected providers start concurrently", async () => {
   });
 
   const comparison = createComparison({
+    userId: USER_ID,
     uploadedAudio: sampleAudio(),
     selectedProviders: ["valsea", "gemini"],
     dependencies: { providers: registry },
@@ -103,6 +113,7 @@ test.serial("one provider failure leaves another provider result intact", async 
   });
 
   const { comparisonRunId } = await createComparison({
+    userId: USER_ID,
     uploadedAudio: sampleAudio(),
     selectedProviders: ["valsea", "gemini"],
     dependencies: { providers: registry },

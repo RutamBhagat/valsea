@@ -109,17 +109,9 @@ Mixed Error Rate (MER) measures transcription accuracy across both scripts. The 
 
 Latency starts immediately before each provider request and ends when that request returns. It includes a Qwen cold start when one occurs. Gemini's 21-second quota pacing is outside the timer. Failed requests remain in the result but do not contribute to MER or latency percentiles.
 
-Configure the benchmark credentials, then run it:
+Start a benchmark from the authenticated Benchmark page. Select 1 through 10 samples; the default is the first 5 samples in manifest order. The TypeScript server validates the selected samples, calls all three providers, and stores the run against the authenticated user. Each user can only read their own benchmark and comparison history.
 
-```bash
-cd apps/qwen-modal
-cp .env.example .env
-uv run python scripts/benchmark.py --sample-count 5
-```
-
-Set `--sample-count` to an integer from 1 through 10. If you omit it, the command uses the first 5 samples. Selection always follows manifest order.
-
-The command validates the selected samples against row metadata, WAV duration, and SHA-256, calls VALSEA, Modal/Qwen, and Gemini directly, and writes `benchmark_result.json`. The result includes the manifest version and selected sample IDs. VALSEA uses `language=english` with correction/tags disabled so the benchmark is reproducible on the Free plan; Qwen and Gemini receive no language hint, and Gemini runs in verbatim mode. Gemini requests are paced 21 seconds apart; that pacing time is excluded from latency.
+VALSEA uses `language=english` with correction and tags disabled so the benchmark is reproducible on the Free plan. Qwen and Gemini receive no language hint, and Gemini runs in verbatim mode. Gemini requests are paced 21 seconds apart; that pacing time is excluded from latency.
 
 Observed benchmark result from the latest run:
 

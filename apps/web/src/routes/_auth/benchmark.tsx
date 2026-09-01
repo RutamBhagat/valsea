@@ -1,4 +1,3 @@
-import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { Card, CardDescription, CardHeader, CardTitle } from "@valsea/ui/components/card";
@@ -7,8 +6,6 @@ import { Skeleton } from "@valsea/ui/components/skeleton";
 import { BenchmarkResults, type DisplayResult } from "@/components/benchmark/benchmark-results";
 import { BenchmarkRunControls } from "@/components/benchmark/benchmark-run-controls";
 import { useBenchmark } from "@/hooks/use-benchmark";
-import { api } from "@/lib/api";
-import { getApiErrorMessage } from "@/lib/api-error";
 
 export const Route = createFileRoute("/_auth/benchmark")({
   component: BenchmarkRoute,
@@ -45,45 +42,10 @@ function getLiveResult(
 
 function BenchmarkRoute() {
   const [sampleCount, setSampleCount] = useState(5);
-  const { benchmark, startBenchmark, isStarting, requestError } = useBenchmark();
+  const { benchmark, startBenchmark, isStarting, isLoading, requestError } = useBenchmark();
   const isRunning = benchmark?.status === "running";
 
-  const savedBenchmarkQuery = useQuery({
-    queryKey: ["committed-benchmark-result"],
-    queryFn: async ({ signal }) => {
-      const { data } = await api.api.benchmark.get({ fetch: { signal } });
-      if (!data || "type" in data) throw new Error("Saved benchmark result is not available");
-      return data;
-    },
-    retry: false,
-    staleTime: Infinity,
-  });
-
-  const liveResult = getLiveResult(benchmark);
-  const savedResult: DisplayResult | null = savedBenchmarkQuery.data
-    ? {
-        manifestVersion: savedBenchmarkQuery.data.manifest_version,
-        sampleCount: savedBenchmarkQuery.data.sample_count,
-        selectedSampleIds: savedBenchmarkQuery.data.selected_sample_ids,
-        summary: savedBenchmarkQuery.data.summary.map((summary) => ({
-          provider: summary.provider,
-          mixedErrorRate: summary.mixed_error_rate,
-          p50LatencyMs: summary.p50_latency_ms,
-          p95LatencyMs: summary.p95_latency_ms,
-          succeeded: summary.succeeded,
-          failed: summary.failed,
-        })),
-        samples: savedBenchmarkQuery.data.samples.map((sample) => ({
-          provider: sample.provider,
-          sampleId: sample.sample_id,
-          reference: sample.reference,
-          prediction: sample.prediction,
-          latencyMs: sample.latency_ms,
-          error: sample.error,
-        })),
-      }
-    : null;
-  const displayedResult = liveResult ?? savedResult;
+  const displayedResult = getLiveResult(benchmark);
 
   return (
     <main className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
@@ -122,18 +84,13 @@ function BenchmarkRoute() {
 
         {displayedResult ? (
           <BenchmarkResults result={displayedResult} />
-        ) : savedBenchmarkQuery.isPending ? (
+        ) : isLoading ? (
           <BenchmarkLoading />
-        ) : savedBenchmarkQuery.isError ? (
-          <Card role="alert" className="border-destructive/30">
+        ) : !requestError && !benchmark ? (
+          <Card>
             <CardHeader>
-              <CardTitle>Saved result unavailable</CardTitle>
-              <CardDescription>
-                {getApiErrorMessage(
-                  savedBenchmarkQuery.error,
-                  "The saved result could not be loaded.",
-                )}
-              </CardDescription>
+              <CardTitle>No previous benchmark runs found</CardTitle>
+              <CardDescription>Start a benchmark to create your first result.</CardDescription>
             </CardHeader>
           </Card>
         ) : null}

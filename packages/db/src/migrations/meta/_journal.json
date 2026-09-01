@@ -15,6 +15,13 @@
       "when": 1788071620429,
       "tag": "0001_uneven_daredevil",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1788251962967,
+      "tag": "0002_perpetual_meggan",
+      "breakpoints": true
     }
   ]
 }

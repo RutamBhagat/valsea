@@ -1,49 +1,29 @@
 import { benchmarkManifest } from "@valsea/benchmark";
-import { db, desc, eq } from "@valsea/db";
+import { and, db, desc, eq } from "@valsea/db";
 import {
   benchmarkRun,
   comparisonRun,
   providerRun,
   type BenchmarkResultJson,
 } from "@valsea/db/schema/index";
-import { Value } from "@sinclair/typebox/value";
-import { env } from "@valsea/env/server";
 import { Elysia, t } from "elysia";
-import { resolve } from "node:path";
 
-import {
-  benchmarkResultUnavailableSchema,
-  committedBenchmarkResultSchema,
-  type CommittedBenchmarkResult,
-} from "../schemas/benchmarks";
+import { authPlugin } from "../plugins/auth";
 import { runBenchmark } from "../services/benchmark-runner";
 
 const DEFAULT_SAMPLE_COUNT = 5;
 const activeExecutions = new Set<string>();
 
-export async function loadCommittedBenchmarkResult(
-  resultPath = resolve(env.BENCHMARK_RESULT_PATH),
-): Promise<CommittedBenchmarkResult> {
-  const file = Bun.file(resultPath);
-  if (!(await file.exists())) {
-    throw new Error("Committed benchmark result is not available");
-  }
-
-  return Value.Parse(committedBenchmarkResultSchema, await file.json());
-}
-
-export function createOrGetActiveBenchmark(sampleCount = DEFAULT_SAMPLE_COUNT) {
+export function createOrGetActiveBenchmark(userId: string, sampleCount = DEFAULT_SAMPLE_COUNT) {
   const [activeRun] = db
     .select({ id: benchmarkRun.id })
     .from(benchmarkRun)
-    .where(eq(benchmarkRun.status, "running"))
+    .where(and(eq(benchmarkRun.userId, userId), eq(benchmarkRun.status, "running")))
     .orderBy(desc(benchmarkRun.createdAt))
     .limit(1)
     .all();
 
-  if (activeRun) {
-    return { benchmarkRunId: activeRun.id };
-  }
+  if (activeRun) return { benchmarkRunId: activeRun.id };
 
   const id = crypto.randomUUID();
   const selectedSampleIds = benchmarkManifest.samples
@@ -62,13 +42,28 @@ export function createOrGetActiveBenchmark(sampleCount = DEFAULT_SAMPLE_COUNT) {
     },
   };
 
-  db.insert(benchmarkRun).values({ id, status: "running", resultJson }).run();
+  db.insert(benchmarkRun).values({ id, userId, status: "running", resultJson }).run();
 
   return { benchmarkRunId: id };
 }
 
-export function getBenchmark(id: string) {
-  return db.select().from(benchmarkRun).where(eq(benchmarkRun.id, id)).limit(1).get();
+export function getBenchmark(userId: string, id: string) {
+  return db
+    .select()
+    .from(benchmarkRun)
+    .where(and(eq(benchmarkRun.id, id), eq(benchmarkRun.userId, userId)))
+    .limit(1)
+    .get();
+}
+
+export function getLatestBenchmark(userId: string) {
+  return db
+    .select()
+    .from(benchmarkRun)
+    .where(eq(benchmarkRun.userId, userId))
+    .orderBy(desc(benchmarkRun.createdAt))
+    .limit(1)
+    .get();
 }
 
 function startBenchmark(
@@ -83,10 +78,20 @@ function startBenchmark(
   });
 }
 
-export function getHistory() {
-  const comparisons = db.select().from(comparisonRun).orderBy(desc(comparisonRun.createdAt)).all();
+export function getHistory(userId: string) {
+  const comparisons = db
+    .select()
+    .from(comparisonRun)
+    .where(eq(comparisonRun.userId, userId))
+    .orderBy(desc(comparisonRun.createdAt))
+    .all();
   const providerRuns = db.select().from(providerRun).all();
-  const benchmarks = db.select().from(benchmarkRun).orderBy(desc(benchmarkRun.createdAt)).all();
+  const benchmarks = db
+    .select()
+    .from(benchmarkRun)
+    .where(eq(benchmarkRun.userId, userId))
+    .orderBy(desc(benchmarkRun.createdAt))
+    .all();
 
   const comparisonSummaries = comparisons.map((comparison) => {
     const runs = providerRuns.filter((run) => run.comparisonRunId === comparison.id);
@@ -117,41 +122,22 @@ export function getHistory() {
 }
 
 export function createBenchmarkRoutes(
-  loadResult: () => Promise<CommittedBenchmarkResult> = loadCommittedBenchmarkResult,
   executeBenchmark: (benchmarkRunId: string) => Promise<void> = runBenchmark,
 ) {
   return new Elysia()
-    .get(
-      "/benchmark",
-      async ({ status }) => {
-        try {
-          return await loadResult();
-        } catch {
-          return status(503, {
-            type: "benchmark_result_unavailable",
-            message: "Committed benchmark result is not available",
-          });
-        }
-      },
-      {
-        response: {
-          200: committedBenchmarkResultSchema,
-          503: benchmarkResultUnavailableSchema,
-        },
-        detail: {
-          summary: "Get the committed benchmark result",
-          tags: ["Benchmarks"],
-        },
-      },
-    )
+    .use(authPlugin)
     .post(
       "/benchmarks",
-      ({ body }) => {
-        const benchmark = createOrGetActiveBenchmark(body.sampleCount ?? DEFAULT_SAMPLE_COUNT);
+      async ({ body, user }) => {
+        const benchmark = createOrGetActiveBenchmark(
+          user.id,
+          body.sampleCount ?? DEFAULT_SAMPLE_COUNT,
+        );
         startBenchmark(benchmark.benchmarkRunId, executeBenchmark);
         return benchmark;
       },
       {
+        auth: true,
         body: t.Object({
           sampleCount: t.Optional(
             t.Integer({ minimum: 1, maximum: 10, default: DEFAULT_SAMPLE_COUNT }),
@@ -164,24 +150,29 @@ export function createBenchmarkRoutes(
       },
     )
     .get(
-      "/benchmarks/:id",
-      ({ params: { id }, status }) => {
-        const run = getBenchmark(id);
-
+      "/benchmarks/latest",
+      ({ user, status }) => {
+        const run = getLatestBenchmark(user.id);
         if (!run) {
-          return status(404, {
-            type: "benchmark_not_found",
-            message: "Benchmark not found",
-          });
+          return status(404, { type: "benchmark_not_found", message: "Benchmark not found" });
         }
-
-        if (run.status === "running") {
-          startBenchmark(run.id, executeBenchmark);
+        if (run.status === "running") startBenchmark(run.id, executeBenchmark);
+        return run;
+      },
+      { auth: true },
+    )
+    .get(
+      "/benchmarks/:id",
+      ({ params: { id }, user, status }) => {
+        const run = getBenchmark(user.id, id);
+        if (!run) {
+          return status(404, { type: "benchmark_not_found", message: "Benchmark not found" });
         }
-
+        if (run.status === "running") startBenchmark(run.id, executeBenchmark);
         return run;
       },
       {
+        auth: true,
         params: t.Object({ id: t.String({ format: "uuid" }) }),
         detail: {
           summary: "Get benchmark progress and results",
@@ -189,12 +180,7 @@ export function createBenchmarkRoutes(
         },
       },
     )
-    .get("/history", () => getHistory(), {
-      detail: {
-        summary: "List comparison and benchmark history",
-        tags: ["History"],
-      },
-    });
+    .get("/history", ({ user }) => getHistory(user.id), { auth: true });
 }
 
 export const benchmarkRoutes = createBenchmarkRoutes();

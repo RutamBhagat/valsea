@@ -46,7 +46,7 @@ export function BenchmarkRunControls({
         {isRunning && progress ? (
           <Progress value={progress.completed} max={progress.total} className="mt-2">
             <ProgressValue className="text-[10px] text-muted-foreground">
-              {progress.completed} / {progress.total} requests
+              {() => `${progress.completed} / ${progress.total} requests`}
             </ProgressValue>
           </Progress>
         ) : null}

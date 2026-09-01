@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "build": "vp build",
+    "check-types": "tsc --noEmit",
     "serve": "vp preview",
     "dev:bare": "vp dev"
   },

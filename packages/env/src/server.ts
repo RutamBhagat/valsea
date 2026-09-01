@@ -15,7 +15,6 @@ export const env = createEnv({
     GEMINI_API_KEY: nonEmptyString,
     MODAL_TOKEN_ID: nonEmptyString,
     MODAL_TOKEN_SECRET: nonEmptyString,
-    BENCHMARK_RESULT_PATH: v.optional(nonEmptyString, "../qwen-modal/benchmark_result.json"),
     NODE_ENV: v.optional(v.picklist(["development", "production", "test"]), "development"),
   },
   runtimeEnv: process.env,

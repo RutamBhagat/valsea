@@ -1,13 +1,15 @@
-import { db, eq } from "@valsea/db";
+import { and, db, eq } from "@valsea/db";
 import { comparisonRun, providerRun } from "@valsea/db/schema/index";
 import bytes from "bytes";
 import { Elysia, t } from "elysia";
 import { fileTypeFromBlob } from "file-type";
 
+import { authPlugin } from "../plugins/auth";
 import { providers } from "../providers";
 import type { ProviderId, TranscriptionProvider } from "../providers/types";
 
 type CreateComparisonInput = {
+  userId: string;
   uploadedAudio: File;
   selectedProviders: ProviderId[];
   dependencies?: {
@@ -16,6 +18,7 @@ type CreateComparisonInput = {
 };
 
 export async function createComparison({
+  userId,
   uploadedAudio,
   selectedProviders,
   dependencies = { providers },
@@ -77,6 +80,7 @@ export async function createComparison({
     tx.insert(comparisonRun)
       .values({
         id: comparisonRunId,
+        userId,
         filename: uploadedAudio.name,
         contentType: uploadedAudio.type,
         sizeBytes: uploadedAudio.size,
@@ -89,9 +93,10 @@ export async function createComparison({
 }
 
 export const comparisonRoutes = new Elysia()
+  .use(authPlugin)
   .post(
     "/comparisons",
-    async ({ body: { audio, providers }, status }) => {
+    async ({ body: { audio, providers }, user, status }) => {
       const detectedType = await fileTypeFromBlob(audio);
 
       if (detectedType?.mime !== "audio/wav") {
@@ -106,11 +111,13 @@ export const comparisonRoutes = new Elysia()
       });
 
       return createComparison({
+        userId: user.id,
         uploadedAudio: normalizedAudio,
         selectedProviders: providers,
       });
     },
     {
+      auth: true,
       body: t.Object({
         audio: t.File({ maxSize: bytes.parse("10 MB")! }),
         providers: t.Array(t.UnionEnum(["valsea", "qwen", "gemini"]), {
@@ -126,11 +133,11 @@ export const comparisonRoutes = new Elysia()
   )
   .get(
     "/comparisons/:id",
-    async ({ params: { id }, status }) => {
+    async ({ params: { id }, user, status }) => {
       const [comparison] = await db
         .select()
         .from(comparisonRun)
-        .where(eq(comparisonRun.id, id))
+        .where(and(eq(comparisonRun.id, id), eq(comparisonRun.userId, user.id)))
         .limit(1);
 
       if (!comparison) {
@@ -163,6 +170,7 @@ export const comparisonRoutes = new Elysia()
       };
     },
     {
+      auth: true,
       params: t.Object({ id: t.String({ format: "uuid" }) }),
       detail: {
         summary: "Get a transcription comparison",

@@ -1,7 +1,7 @@
 [project]
 name = "qwen-modal"
 version = "0.1.0"
-description = "Modal-hosted Qwen3 ASR service and benchmark client"
+description = "Modal-hosted Qwen3 ASR service"
 requires-python = ">=3.12"
 dependencies = ["modal>=1.5.4,<2"]
 
@@ -16,7 +16,6 @@ _typecheck = "basedpyright"
 check = ["_lint", "_compile", "_typecheck"]
 modal-dev = "modal serve -m qwen_modal.app"
 modal-deploy = "modal deploy -m qwen_modal.app"
-benchmark = "python scripts/benchmark.py"
 
 [tool.ruff.lint]
 select = ["C901"]

@@ -1,9 +1,9 @@
 import { cors } from "@elysiajs/cors";
 import { openapi } from "@elysiajs/openapi";
-import { auth } from "@valsea/auth";
 import { env } from "@valsea/env/server";
 import { Elysia, t } from "elysia";
 
+import { authPlugin } from "./plugins/auth";
 import { apiRoutes } from "./routes/api";
 
 export const app = new Elysia()
@@ -30,12 +30,7 @@ export const app = new Elysia()
       credentials: true,
     }),
   )
-  .all("/api/auth/*", async ({ request, status }) => {
-    if (["POST", "GET"].includes(request.method)) {
-      return auth.handler(request);
-    }
-    return status(405);
-  })
+  .use(authPlugin)
   .use(apiRoutes)
   .get("/healthz", () => "OK" as const, {
     detail: {
