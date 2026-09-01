@@ -10,6 +10,7 @@ type QwenResponse = {
 const modal = new ModalClient({
   tokenId: env.MODAL_TOKEN_ID,
   tokenSecret: env.MODAL_TOKEN_SECRET,
+  environment: "valsea",
 });
 
 const createTranscriptionMethod = () =>
