@@ -5,6 +5,7 @@ export default defineConfig({
   out: "./src/migrations",
   dialect: "sqlite",
   dbCredentials: {
-    url: "../../.data/valsea.sqlite",
+    url:
+      process.env.NODE_ENV === "production" ? "/data/valsea.sqlite" : "../../.data/valsea.sqlite",
   },
 });

@@ -1,5 +1,5 @@
-import { afterAll, beforeAll, beforeEach, expect, test } from "bun:test";
-import { db, migrateDatabase } from "@valsea/db";
+import { afterAll, beforeEach, expect, test } from "bun:test";
+import { db } from "@valsea/db";
 import { benchmarkRun, comparisonRun, providerRun } from "@valsea/db/schema/index";
 
 import {
@@ -8,10 +8,6 @@ import {
   getBenchmark,
   getHistory,
 } from "../src/routes/benchmarks";
-
-beforeAll(() => {
-  migrateDatabase();
-});
 
 function clearRuns() {
   db.delete(providerRun).run();

@@ -24,10 +24,11 @@ COPY packages/infra/package.json ./packages/infra/package.json
 RUN --mount=type=cache,target=/root/.bun/install/cache bun install --production --filter @valsea/server
 
 COPY --from=builder /app/apps/server/dist/index.mjs ./apps/server/dist/index.mjs
-COPY --from=builder /app/packages/db/src/migrations ./migrations
+COPY --from=builder /app/packages/db/drizzle.config.ts ./packages/db/drizzle.config.ts
+COPY --from=builder /app/packages/db/src/migrations ./packages/db/src/migrations
 COPY --from=builder /app/apps/qwen-modal/benchmark_result.json /app/apps/qwen-modal/benchmark_result.json
 
 EXPOSE 3000
 WORKDIR /app/apps/server
 USER bun
-CMD ["bun", "dist/index.mjs"]
+CMD ["bun", "run", "start"]

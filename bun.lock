@@ -106,11 +106,11 @@
       "dependencies": {
         "@valsea/env": "workspace:*",
         "dotenv": "catalog:",
+        "drizzle-kit": "^0.31.10",
         "drizzle-orm": "^0.45.2",
       },
       "devDependencies": {
         "@valsea/config": "workspace:*",
-        "drizzle-kit": "^0.31.10",
         "typescript": "catalog:",
       },
     },

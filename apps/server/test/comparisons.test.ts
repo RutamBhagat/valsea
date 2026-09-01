@@ -1,13 +1,9 @@
-import { afterAll, afterEach, beforeAll, beforeEach, expect, mock, test } from "bun:test";
-import { db, eq, migrateDatabase } from "@valsea/db";
+import { afterAll, afterEach, beforeEach, expect, mock, test } from "bun:test";
+import { db, eq } from "@valsea/db";
 import { comparisonRun, providerRun } from "@valsea/db/schema/index";
 
 import type { ProviderId, TranscriptionProvider } from "../src/providers/types";
 import { createComparison } from "../src/routes/comparisons";
-
-beforeAll(() => {
-  migrateDatabase();
-});
 
 function clearComparisons() {
   db.delete(providerRun).run();

@@ -3,7 +3,6 @@ import { mkdirSync } from "node:fs";
 
 import { env } from "@valsea/env/server";
 import { drizzle } from "drizzle-orm/bun-sqlite";
-import { migrate } from "drizzle-orm/bun-sqlite/migrator";
 
 import * as schema from "./schema";
 
@@ -20,13 +19,6 @@ export const db = drizzle({ client: sqlite, schema });
 
 export function createDb() {
   return db;
-}
-
-export function migrateDatabase() {
-  const migrationsFolder =
-    env.NODE_ENV === "production" ? "/app/migrations" : `${import.meta.dir}/migrations`;
-
-  migrate(db, { migrationsFolder });
 }
 
 export * from "drizzle-orm";
