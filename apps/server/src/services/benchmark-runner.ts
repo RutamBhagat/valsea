@@ -5,6 +5,7 @@ import { benchmarkRun, type BenchmarkProviderResult } from "@valsea/db/schema/in
 import { providers } from "../providers";
 import type { ProviderId } from "../providers/types";
 import { datasetPayloadSchema } from "./benchmark-runner.schema";
+import { levenshtein } from "./levenshtein";
 
 const DATASET_SERVER = "https://datasets-server.huggingface.co";
 const DATASET = "MERaLiON/Multitask-National-Speech-Corpus-v1";
@@ -99,39 +100,7 @@ export async function runBenchmark(benchmarkRunId: string) {
                 .normalize("NFKC")
                 .toLowerCase()
                 .match(tokenPattern) ?? [];
-            let previousDistances = Array.from(
-              { length: predictionTokens.length + 1 },
-              (_, index) => index,
-            );
-
-            for (
-              let referenceIndex = 1;
-              referenceIndex <= referenceTokens.length;
-              referenceIndex += 1
-            ) {
-              const currentDistances = [referenceIndex];
-
-              for (
-                let predictionIndex = 1;
-                predictionIndex <= predictionTokens.length;
-                predictionIndex += 1
-              ) {
-                currentDistances.push(
-                  Math.min(
-                    currentDistances[predictionIndex - 1]! + 1,
-                    previousDistances[predictionIndex]! + 1,
-                    previousDistances[predictionIndex - 1]! +
-                      (referenceTokens[referenceIndex - 1] === predictionTokens[predictionIndex - 1]
-                        ? 0
-                        : 1),
-                  ),
-                );
-              }
-
-              previousDistances = currentDistances;
-            }
-
-            const edits = previousDistances[predictionTokens.length]!;
+            const edits = levenshtein(referenceTokens, predictionTokens);
             return {
               provider,
               sampleId,
