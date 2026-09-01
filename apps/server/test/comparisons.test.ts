@@ -38,8 +38,10 @@ function sampleAudio() {
 test.serial("selected providers run and persist their final results", async () => {
   const registry = providerRegistry();
 
-  const { comparisonRunId } = await createComparison(sampleAudio(), ["valsea", "gemini"], {
-    providers: registry,
+  const { comparisonRunId } = await createComparison({
+    uploadedAudio: sampleAudio(),
+    selectedProviders: ["valsea", "gemini"],
+    dependencies: { providers: registry },
   });
 
   const rows = db
@@ -72,8 +74,10 @@ test.serial("selected providers start concurrently", async () => {
     gemini: { transcribe: geminiTranscribe },
   });
 
-  const comparison = createComparison(sampleAudio(), ["valsea", "gemini"], {
-    providers: registry,
+  const comparison = createComparison({
+    uploadedAudio: sampleAudio(),
+    selectedProviders: ["valsea", "gemini"],
+    dependencies: { providers: registry },
   });
   await Bun.sleep(0);
 
@@ -97,8 +101,10 @@ test.serial("one provider failure leaves another provider result intact", async 
     },
   });
 
-  const { comparisonRunId } = await createComparison(sampleAudio(), ["valsea", "gemini"], {
-    providers: registry,
+  const { comparisonRunId } = await createComparison({
+    uploadedAudio: sampleAudio(),
+    selectedProviders: ["valsea", "gemini"],
+    dependencies: { providers: registry },
   });
 
   const rows = db

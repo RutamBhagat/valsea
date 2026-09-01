@@ -7,8 +7,6 @@ import { fileTypeFromBlob } from "file-type";
 import { providers } from "../providers";
 import type { ProviderId, TranscriptionProvider } from "../providers/types";
 
-const maxAudioSizeBytes = bytes.parse("10 MB")!; // current valsea limit
-
 const supportedAudioTypes = new Map([
   ["audio/flac", "audio/flac"],
   ["audio/mp4", "audio/mp4"],
@@ -18,17 +16,19 @@ const supportedAudioTypes = new Map([
   ["audio/wav", "audio/wav"],
 ]);
 
-interface ComparisonDependencies {
-  providers?: Record<ProviderId, TranscriptionProvider>;
-}
+type CreateComparisonInput = {
+  uploadedAudio: File;
+  selectedProviders: ProviderId[];
+  dependencies?: {
+    providers: Record<ProviderId, TranscriptionProvider>;
+  };
+};
 
-// function needed for test do not inline
-export async function createComparison(
-  uploadedAudio: File,
-  selectedProviders: ProviderId[],
-  dependencies: ComparisonDependencies = {},
-) {
-  const providerRegistry = dependencies.providers ?? providers;
+export async function createComparison({
+  uploadedAudio,
+  selectedProviders,
+  dependencies = { providers },
+}: CreateComparisonInput) {
   const comparisonRunId = crypto.randomUUID();
   const bytes = new Uint8Array(await uploadedAudio.arrayBuffer());
 
@@ -37,7 +37,7 @@ export async function createComparison(
       const providerStartedAt = performance.now();
 
       try {
-        const result = await providerRegistry[provider].transcribe({
+        const result = await dependencies.providers[provider].transcribe({
           audio: bytes,
           filename: uploadedAudio.name,
           contentType: uploadedAudio.type,
@@ -103,11 +103,8 @@ export async function createComparison(
 export const comparisonRoutes = new Elysia()
   .post(
     "/comparisons",
-    async ({
-      body: { audio: uploadedAudio, providers: selectedProviders },
-      status,
-    }) => {
-      const detectedType = await fileTypeFromBlob(uploadedAudio);
+    async ({ body: { audio, providers }, status }) => {
+      const detectedType = await fileTypeFromBlob(audio);
 
       const contentType = detectedType
         ? supportedAudioTypes.get(detectedType.mime)
@@ -120,15 +117,18 @@ export const comparisonRoutes = new Elysia()
         });
       }
 
-      const normalizedAudio = new File([uploadedAudio], uploadedAudio.name, {
+      const normalizedAudio = new File([audio], audio.name, {
         type: contentType,
       });
 
-      return createComparison(normalizedAudio, selectedProviders);
+      return createComparison({
+        uploadedAudio: normalizedAudio,
+        selectedProviders: providers,
+      });
     },
     {
       body: t.Object({
-        audio: t.File({ maxSize: maxAudioSizeBytes }),
+        audio: t.File({ maxSize: bytes.parse("10 MB")! }),
         providers: t.Array(t.UnionEnum(["valsea", "qwen", "gemini"]), {
           minItems: 2,
           uniqueItems: true,

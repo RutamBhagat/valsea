@@ -2,7 +2,7 @@ import { Button } from "@valsea/ui/components/button";
 import { Progress, ProgressValue } from "@valsea/ui/components/progress";
 import { Slider } from "@valsea/ui/components/slider";
 
-interface BenchmarkRunControlsProps {
+type BenchmarkRunControlsProps = {
   sampleCount: number;
   onSampleCountChange: (sampleCount: number) => void;
   onRun: () => void;
@@ -12,7 +12,7 @@ interface BenchmarkRunControlsProps {
     completed: number;
     total: number;
   };
-}
+};
 
 export function BenchmarkRunControls({
   sampleCount,

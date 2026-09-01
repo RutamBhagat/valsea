@@ -18,14 +18,14 @@ const providerIds: ProviderId[] = ["valsea", "qwen", "gemini"];
 const tokenPattern = /[\u3400-\u4DBF\u4E00-\u9FFF]|[a-z0-9]+(?:'[a-z0-9]+)?/g;
 const speakerTagPattern = /<Speaker\d+>:\s*/g;
 
-interface BenchmarkRunnerDependencies {
+type BenchmarkRunnerDependencies = {
   providers?: Record<ProviderId, TranscriptionProvider>;
   fetch?: typeof fetch;
   sleep?: (milliseconds: number) => Promise<void>;
   now?: () => number;
-}
+};
 
-interface DatasetPayload {
+type DatasetPayload = {
   rows?: Array<{
     row_idx?: number;
     row?: {
@@ -33,7 +33,7 @@ interface DatasetPayload {
       context?: Array<{ src?: string; type?: string }>;
     };
   }>;
-}
+};
 
 function mixedTokens(text: string) {
   return (

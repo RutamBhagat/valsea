@@ -8,9 +8,9 @@ import { TooltipProvider } from "@valsea/ui/components/tooltip";
 
 import appCss from "../index.css?url";
 
-export interface RouterAppContext {
+export type RouterAppContext = {
   queryClient: QueryClient;
-}
+};
 
 export const Route = createRootRouteWithContext<RouterAppContext>()({
   head: () => ({

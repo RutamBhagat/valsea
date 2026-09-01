@@ -2,9 +2,9 @@ import { env } from "@valsea/env/server";
 
 import type { TranscriptionProvider } from "./types";
 
-interface QwenResponse {
+type QwenResponse = {
   text?: unknown;
-}
+};
 
 export const qwen: TranscriptionProvider = {
   transcribe: async ({ audio, contentType }) => {
