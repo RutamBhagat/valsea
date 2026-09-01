@@ -6,7 +6,7 @@ on:
     paths:
       - "apps/server/**"
       - "packages/auth/**"
-      - "packages/benchmark/**"
+      - "apps/qwen-modal/**"
       - "packages/config/**"
       - "packages/db/**"
       - "packages/env/**"
