@@ -159,35 +159,6 @@ export async function runBenchmark(benchmarkRunId: string) {
 
         resultJson.providerResults.push(providerResult);
         resultJson.requestProgress.completed += 1;
-        resultJson.summary = providerIds.map((providerId) => {
-          const providerResults = resultJson.providerResults.filter(
-            (result) => result.provider === providerId,
-          );
-          const succeeded = providerResults.filter((result) => result.error === null);
-          const latencies = succeeded
-            .map((result) => result.latencyMs)
-            .sort((left, right) => left - right);
-          const middle = Math.floor(latencies.length / 2);
-          const edits = succeeded.reduce((total, result) => total + (result.edits ?? 0), 0);
-          const referenceTokens = succeeded.reduce(
-            (total, result) => total + (result.referenceTokens ?? 0),
-            0,
-          );
-
-          return {
-            provider: providerId,
-            mixedErrorRate: referenceTokens > 0 ? edits / referenceTokens : null,
-            p50LatencyMs:
-              latencies.length === 0
-                ? null
-                : latencies.length % 2 === 0
-                  ? (latencies[middle - 1]! + latencies[middle]!) / 2
-                  : latencies[middle]!,
-            p95LatencyMs: latencies[Math.max(0, Math.ceil(0.95 * latencies.length) - 1)] ?? null,
-            succeeded: succeeded.length,
-            failed: providerResults.length - succeeded.length,
-          };
-        });
 
         db.update(benchmarkRun)
           .set({ status: "running", resultJson, updatedAt: new Date() })
@@ -195,6 +166,36 @@ export async function runBenchmark(benchmarkRunId: string) {
           .run();
       }
     }
+
+    resultJson.summary = providerIds.map((providerId) => {
+      const providerResults = resultJson.providerResults.filter(
+        (result) => result.provider === providerId,
+      );
+      const succeeded = providerResults.filter((result) => result.error === null);
+      const latencies = succeeded
+        .map((result) => result.latencyMs)
+        .sort((left, right) => left - right);
+      const middle = Math.floor(latencies.length / 2);
+      const edits = succeeded.reduce((total, result) => total + (result.edits ?? 0), 0);
+      const referenceTokens = succeeded.reduce(
+        (total, result) => total + (result.referenceTokens ?? 0),
+        0,
+      );
+
+      return {
+        provider: providerId,
+        mixedErrorRate: referenceTokens > 0 ? edits / referenceTokens : null,
+        p50LatencyMs:
+          latencies.length === 0
+            ? null
+            : latencies.length % 2 === 0
+              ? (latencies[middle - 1]! + latencies[middle]!) / 2
+              : latencies[middle]!,
+        p95LatencyMs: latencies[Math.max(0, Math.ceil(0.95 * latencies.length) - 1)] ?? null,
+        succeeded: succeeded.length,
+        failed: providerResults.length - succeeded.length,
+      };
+    });
 
     const status = resultJson.providerResults.some((result) => result.error !== null)
       ? "failed"
