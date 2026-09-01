@@ -1,9 +1,10 @@
-import { benchmarkManifest } from "@valsea/benchmark";
 import { db, eq } from "@valsea/db";
+import { Value } from "@sinclair/typebox/value";
 import { benchmarkRun, type BenchmarkProviderResult } from "@valsea/db/schema/index";
 
 import { providers } from "../providers";
 import type { ProviderId } from "../providers/types";
+import { datasetPayloadSchema } from "./benchmark-runner.schema";
 
 const DATASET_SERVER = "https://datasets-server.huggingface.co";
 const DATASET = "MERaLiON/Multitask-National-Speech-Corpus-v1";
@@ -31,39 +32,38 @@ export async function runBenchmark(benchmarkRunId: string) {
   const lastProviderStart = new Map<ProviderId, number>();
 
   try {
-    for (const sample of benchmarkManifest.samples.slice(0, resultJson.sampleCount)) {
-      const sampleId = `part4-${sample.row_index.toString().padStart(4, "0")}`;
-      const query = new URLSearchParams({
-        dataset: DATASET,
-        config: CONFIG,
-        split: SPLIT,
-        offset: String(sample.row_index),
-        length: "1",
-      });
-      const datasetResponse = await fetch(`${DATASET_SERVER}/rows?${query}`);
-      if (!datasetResponse.ok) {
-        throw new Error(`Dataset request failed with HTTP ${datasetResponse.status}`);
-      }
+    const query = new URLSearchParams({
+      dataset: DATASET,
+      config: CONFIG,
+      split: SPLIT,
+      offset: "0",
+      length: String(resultJson.sampleCount),
+    });
+    const datasetResponse = await fetch(`${DATASET_SERVER}/rows?${query}`);
+    if (!datasetResponse.ok) {
+      throw new Error(`Dataset request failed with HTTP ${datasetResponse.status}`);
+    }
 
-      const payload = (await datasetResponse.json()) as {
-        rows?: Array<{
-          row_idx?: number;
-          row?: {
-            answer?: string;
-            context?: Array<{ src?: string; type?: string }>;
-          };
-        }>;
-      };
-      const datasetRow = payload.rows?.[0];
-      const audioAsset = datasetRow?.row?.context?.[0];
+    const payload: unknown = await datasetResponse.json();
+    if (!Value.Check(datasetPayloadSchema, payload)) {
+      throw new Error("MERaLiON returned an invalid response");
+    }
+    if (payload.rows.length !== resultJson.sampleCount) {
+      throw new Error(
+        `MERaLiON returned ${payload.rows.length} of ${resultJson.sampleCount} requested samples`,
+      );
+    }
 
-      if (
-        datasetRow?.row_idx !== sample.row_index ||
-        datasetRow.row?.answer !== sample.reference ||
-        typeof audioAsset?.src !== "string" ||
-        typeof audioAsset.type !== "string"
-      ) {
-        throw new Error(`MERaLiON sample ${sampleId} changed`);
+    resultJson.selectedSampleIds = payload.rows.map(
+      ({ row_idx }) => `part4-${row_idx.toString().padStart(4, "0")}`,
+    );
+
+    for (const datasetRow of payload.rows) {
+      const sampleId = `part4-${datasetRow.row_idx.toString().padStart(4, "0")}`;
+      const reference = datasetRow.row.answer;
+      const audioAsset = datasetRow.row.context[0];
+      if (!audioAsset) {
+        throw new Error(`MERaLiON sample ${sampleId} has no audio`);
       }
 
       const audioResponse = await fetch(audioAsset.src);
@@ -71,13 +71,9 @@ export async function runBenchmark(benchmarkRunId: string) {
         throw new Error(`Audio request failed with HTTP ${audioResponse.status}`);
       }
 
-      const audioBytes = new Uint8Array(await audioResponse.arrayBuffer());
-      const hash = new Bun.CryptoHasher("sha256").update(audioBytes).digest("hex");
-      if (hash !== sample.audio_sha256) {
-        throw new Error("MERaLiON sample audio hash changed");
-      }
-
-      const audio = new File([audioBytes], `${sampleId}.wav`, { type: audioAsset.type });
+      const audio = new File([await audioResponse.arrayBuffer()], `${sampleId}.wav`, {
+        type: audioAsset.type,
+      });
 
       for (const provider of providerIds) {
         const previousStart = lastProviderStart.get(provider);
@@ -92,7 +88,7 @@ export async function runBenchmark(benchmarkRunId: string) {
         try {
           const transcription = await providers[provider].transcribe({ audio, benchmark: true });
           const referenceTokens =
-            sample.reference
+            reference
               .replace(speakerTagPattern, " ")
               .normalize("NFKC")
               .toLowerCase()
@@ -139,7 +135,7 @@ export async function runBenchmark(benchmarkRunId: string) {
           providerResult = {
             provider,
             sampleId,
-            reference: sample.reference,
+            reference,
             prediction: transcription.text,
             latencyMs: performance.now() - startedAt,
             errorRate: edits / referenceTokens.length,
@@ -151,7 +147,7 @@ export async function runBenchmark(benchmarkRunId: string) {
           providerResult = {
             provider,
             sampleId,
-            reference: sample.reference,
+            reference,
             prediction: null,
             latencyMs: performance.now() - startedAt,
             errorRate: null,

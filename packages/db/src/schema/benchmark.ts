@@ -29,7 +29,6 @@ export type BenchmarkSummary = {
 };
 
 export type BenchmarkResultJson = {
-  manifestVersion: number;
   selectedSampleIds: string[];
   sampleCount: number;
   providerResults: BenchmarkProviderResult[];

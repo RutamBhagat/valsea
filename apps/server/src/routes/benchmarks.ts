@@ -1,4 +1,3 @@
-import { benchmarkManifest } from "@valsea/benchmark";
 import { and, db, desc, eq } from "@valsea/db";
 import { benchmarkRun, type BenchmarkResultJson } from "@valsea/db/schema/index";
 import { Elysia, t } from "elysia";
@@ -6,7 +5,6 @@ import { Elysia, t } from "elysia";
 import { authPlugin } from "../plugins/auth";
 import { runBenchmark } from "../services/benchmark-runner";
 
-const DEFAULT_SAMPLE_COUNT = 5;
 const activeExecutions = new Set<string>();
 
 function startBenchmark(benchmarkRunId: string) {
@@ -37,18 +35,13 @@ export const benchmarkRoutes = new Elysia()
       }
 
       const id = crypto.randomUUID();
-      const sampleCount = body.sampleCount ?? DEFAULT_SAMPLE_COUNT;
-      const selectedSampleIds = benchmarkManifest.samples
-        .slice(0, sampleCount)
-        .map(({ row_index }) => `part4-${row_index.toString().padStart(4, "0")}`);
       const resultJson: BenchmarkResultJson = {
-        manifestVersion: benchmarkManifest.version,
-        selectedSampleIds,
-        sampleCount,
+        selectedSampleIds: [],
+        sampleCount: body.sampleCount,
         providerResults: [],
         summary: [],
         failures: [],
-        requestProgress: { completed: 0, total: sampleCount * 3 },
+        requestProgress: { completed: 0, total: body.sampleCount * 3 },
       };
 
       db.insert(benchmarkRun).values({ id, userId: user.id, status: "running", resultJson }).run();
@@ -59,9 +52,7 @@ export const benchmarkRoutes = new Elysia()
     {
       auth: true,
       body: t.Object({
-        sampleCount: t.Optional(
-          t.Integer({ minimum: 1, maximum: 10, default: DEFAULT_SAMPLE_COUNT }),
-        ),
+        sampleCount: t.Integer({ minimum: 1, maximum: 10 }),
       }),
       detail: {
         summary: "Start or reconnect to a benchmark",
@@ -81,7 +72,10 @@ export const benchmarkRoutes = new Elysia()
         .get();
 
       if (!run) {
-        return status(404, { type: "benchmark_not_found", message: "Benchmark not found" });
+        return status(404, {
+          type: "benchmark_not_found",
+          message: "Benchmark not found",
+        });
       }
       if (run.status === "running") startBenchmark(run.id);
       return run;
@@ -99,7 +93,10 @@ export const benchmarkRoutes = new Elysia()
         .get();
 
       if (!run) {
-        return status(404, { type: "benchmark_not_found", message: "Benchmark not found" });
+        return status(404, {
+          type: "benchmark_not_found",
+          message: "Benchmark not found",
+        });
       }
       if (run.status === "running") startBenchmark(run.id);
       return run;

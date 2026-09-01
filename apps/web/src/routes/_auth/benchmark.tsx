@@ -32,7 +32,6 @@ function getLiveResult(
   }
 
   return {
-    manifestVersion: benchmark.resultJson.manifestVersion,
     sampleCount: benchmark.resultJson.sampleCount,
     selectedSampleIds: benchmark.resultJson.selectedSampleIds,
     summary: benchmark.resultJson.summary,

@@ -32,7 +32,6 @@ type DisplaySample = {
 };
 
 export type DisplayResult = {
-  manifestVersion: number;
   sampleCount: number;
   selectedSampleIds: string[];
   summary: DisplaySummary[];
