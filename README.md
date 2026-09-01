@@ -29,9 +29,7 @@ The API listens on `http://localhost:3000`. The web application listens on `http
 
 Production web application: https://app-valsea.rutam.dpdns.org
 
-Modal Qwen transcription endpoint: https://rutambhagat-valsea--qwen3-asr-qwenasr-transcribe.modal.run
-
-The HTTP endpoint requires Modal proxy authentication. The server uses the Modal SDK and calls the deployed `QwenASR.transcribe_remote` method with `MODAL_TOKEN_ID` and `MODAL_TOKEN_SECRET`.
+The server and benchmark client use the Modal SDK to call the deployed `QwenASR.transcribe_remote` method with `MODAL_TOKEN_ID` and `MODAL_TOKEN_SECRET`.
 
 Required server variables are documented in `apps/server/.env.example`. Keep all provider credentials in the server environment. The browser must not receive them.
 
@@ -54,7 +52,7 @@ The diagram shows the backend request path, external providers, and server deplo
 1. Modal builds a Python 3.12 image with FFmpeg, Qwen ASR, and PyTorch.
 2. A persistent Modal Volume is mounted at `/cache`. Hugging Face downloads the model weights to this cache once, so a new container does not download them again.
 3. A Modal class requests one A10G GPU. Its `@modal.enter` hook loads `Qwen/Qwen3-ASR-1.7B` in BF16 and moves it to GPU memory before Modal marks the container as ready.
-4. A Modal method accepts audio from the server SDK, runs transcription outside the event loop, and returns the text. An authenticated FastAPI endpoint provides the same operation to the benchmark client.
+4. A Modal method accepts audio from the server or benchmark SDK, runs transcription outside the event loop, and returns the text.
 
 The deployment sets `max_containers=1` and does not set `min_containers`, so Modal can scale the service to zero when it is idle. This limits GPU cost but adds a cold start. The first request after scale-to-zero takes approximately 20 seconds because Modal must start the container and copy the cached weights into GPU memory. Requests to the same warm container skip initialization and are faster. The one-container limit also queues overlapping requests instead of adding GPU replicas.
 
@@ -62,7 +60,7 @@ Run the service from `apps/qwen-modal`:
 
 ```bash
 uv sync
-uv run poe modal-dev     # temporary development endpoint
+uv run poe modal-dev     # temporary development deployment
 uv run poe modal-deploy  # persistent deployment
 ```
 
@@ -111,10 +109,11 @@ Mixed Error Rate (MER) measures transcription accuracy across both scripts. The 
 
 Latency starts immediately before each provider request and ends when that request returns. It includes a Qwen cold start when one occurs. Gemini's 21-second quota pacing is outside the timer. Failed requests remain in the result but do not contribute to MER or latency percentiles.
 
-With the provider credentials already configured in `apps/server/.env`:
+Configure the benchmark credentials, then run it:
 
 ```bash
 cd apps/qwen-modal
+cp .env.example .env
 uv run python scripts/benchmark.py --sample-count 5
 ```
 

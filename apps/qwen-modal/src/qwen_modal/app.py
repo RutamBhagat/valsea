@@ -4,7 +4,6 @@ from tempfile import NamedTemporaryFile
 from typing import Protocol, runtime_checkable
 
 import modal
-from fastapi import HTTPException, Request
 
 
 class _Transcription(Protocol):
@@ -29,9 +28,7 @@ HF_CACHE_DIR = "/cache"
 image = (
     modal.Image.debian_slim(python_version="3.12")
     .apt_install("ffmpeg", "libsndfile1", "sox")
-    .pip_install(
-        "fastapi[standard]>=0.115,<1", "qwen-asr==0.0.6", "torch==2.9.1"
-    )
+    .pip_install("qwen-asr==0.0.6", "torch==2.9.1")
     .env(
         {
             "HF_HOME": HF_CACHE_DIR,
@@ -80,22 +77,6 @@ class QwenASR:
     async def transcribe_remote(self, audio: bytes) -> dict[str, str]:
         if not audio:
             raise ValueError("The WAV audio is empty")
-        if not isinstance(self.model, _ASRModel):
-            raise TypeError("The ASR model is not loaded")
-
-        return await asyncio.to_thread(self._transcribe, self.model, audio)
-
-    @modal.fastapi_endpoint(
-        method="POST", docs=True, requires_proxy_auth=True
-    )
-    async def transcribe(self, request: Request) -> dict[str, str]:
-        content_type = request.headers.get("content-type", "").partition(";")[0]
-        if content_type not in {"audio/wav", "audio/x-wav"}:
-            raise HTTPException(status_code=415, detail="Only WAV audio is supported")
-
-        audio = await request.body()
-        if not audio:
-            raise HTTPException(status_code=400, detail="The WAV body is empty")
         if not isinstance(self.model, _ASRModel):
             raise TypeError("The ASR model is not loaded")
 

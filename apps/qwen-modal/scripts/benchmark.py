@@ -21,6 +21,8 @@ from pathlib import Path
 from typing import Literal, cast
 from uuid import uuid4
 
+import modal
+
 
 ProviderId = Literal["valsea", "qwen", "gemini"]
 
@@ -28,7 +30,7 @@ PROJECT_DIR = Path(__file__).resolve().parents[1]
 REPOSITORY_ROOT = PROJECT_DIR.parents[1]
 DEFAULT_MANIFEST_PATH = REPOSITORY_ROOT / "packages" / "benchmark" / "benchmark_manifest.json"
 DEFAULT_RESULT_PATH = PROJECT_DIR / "benchmark_result.json"
-DEFAULT_ENV_PATH = PROJECT_DIR.parent / "server" / ".env"
+DEFAULT_ENV_PATH = PROJECT_DIR / ".env"
 
 MIN_SAMPLE_COUNT = 1
 DEFAULT_SAMPLE_COUNT = 5
@@ -354,18 +356,21 @@ def call_valsea(audio: bytes, filename: str, content_type: str) -> str:
     return _expect_str(payload.get("text"), "VALSEA transcription")
 
 
-def call_qwen(audio: bytes, _filename: str, content_type: str) -> str:
-    request = urllib.request.Request(
-        require_env("QWEN_MODAL_URL"),
-        data=audio,
-        method="POST",
-        headers={
-            "Content-Type": content_type,
-            "Modal-Key": require_env("MODAL_PROXY_TOKEN_ID"),
-            "Modal-Secret": require_env("MODAL_PROXY_TOKEN_SECRET"),
-        },
-    )
-    payload = _request_json(request, timeout=300)
+_qwen_instance: object | None = None
+
+
+def call_qwen(audio: bytes, _filename: str, _content_type: str) -> str:
+    global _qwen_instance
+    if _qwen_instance is None:
+        qwen_class = modal.Cls.from_name("qwen3-asr", "QwenASR")
+        _qwen_instance = qwen_class()
+
+    method = getattr(_qwen_instance, "transcribe_remote", None)
+    remote = getattr(method, "remote", None)
+    if not callable(remote):
+        raise TypeError("QwenASR.transcribe_remote is not callable")
+
+    payload = _expect_dict(remote(audio), "Qwen transcription response")
     return _expect_str(payload.get("text"), "Qwen transcription")
 
 
