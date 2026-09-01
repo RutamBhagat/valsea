@@ -5,121 +5,14 @@ import { Elysia, t } from "elysia";
 import { fileTypeFromBlob } from "file-type";
 
 import { authPlugin } from "../plugins/auth";
-import { providers } from "../providers";
-import type { ProviderId, TranscriptionProvider } from "../providers/types";
-
-type CreateComparisonInput = {
-  userId: string;
-  uploadedAudio: File;
-  selectedProviders: ProviderId[];
-  dependencies?: {
-    providers: Record<ProviderId, TranscriptionProvider>;
-  };
-};
-
-export async function createComparison({
-  userId,
-  uploadedAudio,
-  selectedProviders,
-  dependencies = { providers },
-}: CreateComparisonInput) {
-  const comparisonRunId = crypto.randomUUID();
-
-  db.transaction((tx) => {
-    tx.insert(comparisonRun)
-      .values({
-        id: comparisonRunId,
-        userId,
-        filename: uploadedAudio.name,
-        contentType: uploadedAudio.type,
-        sizeBytes: uploadedAudio.size,
-      })
-      .run();
-    tx.insert(providerRun)
-      .values(
-        selectedProviders.map((provider) => ({
-          comparisonRunId,
-          provider,
-          status: "pending" as const,
-        })),
-      )
-      .run();
-  });
-
-  queueMicrotask(() => {
-    void Promise.allSettled(
-      selectedProviders.map(async (provider) => {
-        const providerStartedAt = performance.now();
-
-        try {
-          const result = await dependencies.providers[provider].transcribe({
-            audio: uploadedAudio,
-          });
-          const latencyMs = Math.round(performance.now() - providerStartedAt);
-
-          db.update(providerRun)
-            .set({
-              status: "succeeded",
-              transcript: result.text,
-              latencyMs,
-              error: null,
-            })
-            .where(
-              and(
-                eq(providerRun.comparisonRunId, comparisonRunId),
-                eq(providerRun.provider, provider),
-              ),
-            )
-            .run();
-
-          console.info(
-            JSON.stringify({
-              comparisonRunId,
-              provider,
-              status: "succeeded",
-              latencyMs,
-            }),
-          );
-        } catch {
-          const latencyMs = Math.round(performance.now() - providerStartedAt);
-
-          db.update(providerRun)
-            .set({
-              status: "failed",
-              transcript: null,
-              latencyMs,
-              error: "Transcription failed",
-            })
-            .where(
-              and(
-                eq(providerRun.comparisonRunId, comparisonRunId),
-                eq(providerRun.provider, provider),
-              ),
-            )
-            .run();
-
-          console.error(
-            JSON.stringify({
-              comparisonRunId,
-              provider,
-              status: "failed",
-              latencyMs,
-            }),
-          );
-        }
-      }),
-    );
-  });
-
-  return { comparisonRunId };
-}
+import { providers as providerImplementations } from "../providers";
 
 export const comparisonRoutes = new Elysia()
   .use(authPlugin)
   .post(
     "/comparisons",
-    async ({ body: { audio, providers }, user, status }) => {
-      const detectedType = await fileTypeFromBlob(audio);
+    async ({ body, user, status }) => {
+      const detectedType = await fileTypeFromBlob(body.audio);
 
       if (detectedType?.mime !== "audio/wav") {
         return status(422, {
@@ -128,15 +21,84 @@ export const comparisonRoutes = new Elysia()
         });
       }
 
-      const normalizedAudio = new File([audio], audio.name, {
-        type: "audio/wav",
+      const audio = new File([body.audio], body.audio.name, { type: "audio/wav" });
+      const comparisonRunId = crypto.randomUUID();
+
+      db.transaction((tx) => {
+        tx.insert(comparisonRun)
+          .values({
+            id: comparisonRunId,
+            userId: user.id,
+            filename: audio.name,
+            contentType: audio.type,
+            sizeBytes: audio.size,
+          })
+          .run();
+        tx.insert(providerRun)
+          .values(
+            body.providers.map((provider) => ({
+              comparisonRunId,
+              provider,
+              status: "pending" as const,
+            })),
+          )
+          .run();
       });
 
-      return createComparison({
-        userId: user.id,
-        uploadedAudio: normalizedAudio,
-        selectedProviders: providers,
+      queueMicrotask(() => {
+        void Promise.allSettled(
+          body.providers.map(async (provider) => {
+            const startedAt = performance.now();
+
+            try {
+              const result = await providerImplementations[provider].transcribe({ audio });
+              const latencyMs = Math.round(performance.now() - startedAt);
+
+              db.update(providerRun)
+                .set({
+                  status: "succeeded",
+                  transcript: result.text,
+                  latencyMs,
+                  error: null,
+                })
+                .where(
+                  and(
+                    eq(providerRun.comparisonRunId, comparisonRunId),
+                    eq(providerRun.provider, provider),
+                  ),
+                )
+                .run();
+
+              console.info(
+                JSON.stringify({ comparisonRunId, provider, status: "succeeded", latencyMs }),
+              );
+            } catch {
+              const latencyMs = Math.round(performance.now() - startedAt);
+
+              db.update(providerRun)
+                .set({
+                  status: "failed",
+                  transcript: null,
+                  latencyMs,
+                  error: "Transcription failed",
+                })
+                .where(
+                  and(
+                    eq(providerRun.comparisonRunId, comparisonRunId),
+                    eq(providerRun.provider, provider),
+                  ),
+                )
+                .run();
+
+              console.error(
+                JSON.stringify({ comparisonRunId, provider, status: "failed", latencyMs }),
+              );
+            }
+          }),
+        );
       });
+
+      return { comparisonRunId };
     },
     {
       auth: true,
@@ -155,12 +117,13 @@ export const comparisonRoutes = new Elysia()
   )
   .get(
     "/comparisons/:id",
-    async ({ params: { id }, user, status }) => {
-      const [comparison] = await db
+    ({ params: { id }, user, status }) => {
+      const comparison = db
         .select()
         .from(comparisonRun)
         .where(and(eq(comparisonRun.id, id), eq(comparisonRun.userId, user.id)))
-        .limit(1);
+        .limit(1)
+        .get();
 
       if (!comparison) {
         return status(404, {
@@ -169,7 +132,7 @@ export const comparisonRoutes = new Elysia()
         });
       }
 
-      const providerRuns = await db
+      const providerRuns = db
         .select({
           provider: providerRun.provider,
           status: providerRun.status,
@@ -178,7 +141,8 @@ export const comparisonRoutes = new Elysia()
           error: providerRun.error,
         })
         .from(providerRun)
-        .where(eq(providerRun.comparisonRunId, id));
+        .where(eq(providerRun.comparisonRunId, id))
+        .all();
 
       return {
         id: comparison.id,
