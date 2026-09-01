@@ -80,9 +80,13 @@ class QwenASR:
         method="POST", docs=True, requires_proxy_auth=True
     )
     async def transcribe(self, request: Request) -> dict[str, str]:
+        content_type = request.headers.get("content-type", "").partition(";")[0]
+        if content_type not in {"audio/wav", "audio/x-wav"}:
+            raise HTTPException(status_code=415, detail="Only WAV audio is supported")
+
         audio = await request.body()
         if not audio:
-            raise HTTPException(status_code=400, detail="The MP3 body is empty")
+            raise HTTPException(status_code=400, detail="The WAV body is empty")
         if not isinstance(self.model, _ASRModel):
             raise TypeError("The ASR model is not loaded")
 
@@ -90,7 +94,7 @@ class QwenASR:
 
     @staticmethod
     def _transcribe(model: _ASRModel, audio: bytes) -> dict[str, str]:
-        with NamedTemporaryFile(suffix=".mp3") as audio_file:
+        with NamedTemporaryFile(suffix=".wav") as audio_file:
             audio_file.write(audio)
             audio_file.flush()
             results = model.transcribe(audio=audio_file.name, language=None)

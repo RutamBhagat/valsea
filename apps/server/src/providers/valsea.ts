@@ -1,5 +1,5 @@
 import { env } from "@valsea/env/server";
-import OpenAI, { toFile } from "openai";
+import OpenAI from "openai";
 
 import type { TranscriptionProvider } from "./types";
 
@@ -9,10 +9,10 @@ const client = new OpenAI({
 });
 
 export const valsea: TranscriptionProvider = {
-  transcribe: async ({ audio, filename, contentType, benchmark }) => {
+  transcribe: async ({ audio, benchmark }) => {
     const result = await client.audio.transcriptions.create(
       {
-        file: await toFile(audio, filename, { type: contentType }),
+        file: audio,
         model: "valsea-transcribe",
         language: "english",
         ...(benchmark

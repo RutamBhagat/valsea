@@ -37,9 +37,10 @@ function sampleAudio() {
 
 test.serial("selected providers run and persist their final results", async () => {
   const registry = providerRegistry();
+  const audio = sampleAudio();
 
   const { comparisonRunId } = await createComparison({
-    uploadedAudio: sampleAudio(),
+    uploadedAudio: audio,
     selectedProviders: ["valsea", "gemini"],
     dependencies: { providers: registry },
   });
@@ -55,9 +56,9 @@ test.serial("selected providers run and persist their final results", async () =
     .all()
     .sort((left, right) => left.provider.localeCompare(right.provider));
 
-  expect(registry.valsea.transcribe).toHaveBeenCalledTimes(1);
+  expect(registry.valsea.transcribe).toHaveBeenCalledWith({ audio });
   expect(registry.qwen.transcribe).not.toHaveBeenCalled();
-  expect(registry.gemini.transcribe).toHaveBeenCalledTimes(1);
+  expect(registry.gemini.transcribe).toHaveBeenCalledWith({ audio });
   expect(rows).toEqual([
     { provider: "gemini", status: "succeeded", transcript: "gemini transcript" },
     { provider: "valsea", status: "succeeded", transcript: "valsea transcript" },

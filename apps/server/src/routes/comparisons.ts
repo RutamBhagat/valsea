@@ -7,15 +7,6 @@ import { fileTypeFromBlob } from "file-type";
 import { providers } from "../providers";
 import type { ProviderId, TranscriptionProvider } from "../providers/types";
 
-const supportedAudioTypes = new Map([
-  ["audio/flac", "audio/flac"],
-  ["audio/mp4", "audio/mp4"],
-  ["audio/x-m4a", "audio/mp4"],
-  ["audio/mpeg", "audio/mpeg"],
-  ["audio/ogg", "audio/ogg"],
-  ["audio/wav", "audio/wav"],
-]);
-
 type CreateComparisonInput = {
   uploadedAudio: File;
   selectedProviders: ProviderId[];
@@ -30,7 +21,6 @@ export async function createComparison({
   dependencies = { providers },
 }: CreateComparisonInput) {
   const comparisonRunId = crypto.randomUUID();
-  const bytes = new Uint8Array(await uploadedAudio.arrayBuffer());
 
   const providerRunRows = await Promise.all(
     selectedProviders.map(async (provider) => {
@@ -38,9 +28,7 @@ export async function createComparison({
 
       try {
         const result = await dependencies.providers[provider].transcribe({
-          audio: bytes,
-          filename: uploadedAudio.name,
-          contentType: uploadedAudio.type,
+          audio: uploadedAudio,
         });
         const latencyMs = Math.round(performance.now() - providerStartedAt);
 
@@ -106,19 +94,15 @@ export const comparisonRoutes = new Elysia()
     async ({ body: { audio, providers }, status }) => {
       const detectedType = await fileTypeFromBlob(audio);
 
-      const contentType = detectedType
-        ? supportedAudioTypes.get(detectedType.mime)
-        : undefined;
-
-      if (!contentType) {
+      if (detectedType?.mime !== "audio/wav") {
         return status(422, {
           type: "unsupported_audio_type",
-          message: "Unsupported audio format",
+          message: "Only WAV audio is supported",
         });
       }
 
       const normalizedAudio = new File([audio], audio.name, {
-        type: contentType,
+        type: "audio/wav",
       });
 
       return createComparison({

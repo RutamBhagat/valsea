@@ -6,21 +6,8 @@ import { type FileRejection, useDropzone } from "react-dropzone";
 const maxAudioSizeBytes = 10_000_000;
 
 const supportedAudioTypes = {
-  "audio/flac": [".flac"],
-  "audio/mp4": [".m4a"],
-  "audio/mpeg": [".mp3"],
-  "audio/ogg": [".ogg"],
   "audio/wav": [".wav"],
   "audio/x-wav": [".wav"],
-};
-
-const audioTypeLabels: Record<string, string> = {
-  "audio/flac": "FLAC",
-  "audio/mp4": "M4A",
-  "audio/mpeg": "MP3",
-  "audio/ogg": "OGG",
-  "audio/wav": "WAV",
-  "audio/x-wav": "WAV",
 };
 
 function DropzoneContent({
@@ -34,20 +21,16 @@ function DropzoneContent({
 }) {
   let title = "Provide an audio file";
   let description = "Drop it here or click to browse";
-  let footer = "FLAC · M4A · MP3 · OGG · WAV · 10 MB max";
+  let footer = "WAV · 10 MB max";
 
   if (isDragReject) {
     title = "Unsupported audio format";
-    description = "Choose one of the supported formats";
+    description = "Choose a WAV file";
   } else if (isDragActive) {
     title = "Release to select";
     description = audioFile ? "Replace the current selection" : "Use this file for comparison";
   } else if (audioFile) {
-    description = `${audioTypeLabels[audioFile.type] ?? "AUDIO"} · ${(
-      audioFile.size /
-      1024 /
-      1024
-    ).toFixed(2)} MB selected`;
+    description = `WAV · ${(audioFile.size / 1024 / 1024).toFixed(2)} MB selected`;
     footer = "Drop or click to choose a different file";
   }
 

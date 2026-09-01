@@ -7,15 +7,15 @@ type QwenResponse = {
 };
 
 export const qwen: TranscriptionProvider = {
-  transcribe: async ({ audio, contentType }) => {
+  transcribe: async ({ audio }) => {
     const response = await fetch(env.QWEN_MODAL_URL, {
       method: "POST",
       headers: {
-        "Content-Type": contentType,
+        "Content-Type": audio.type,
         "Modal-Key": env.MODAL_PROXY_TOKEN_ID,
         "Modal-Secret": env.MODAL_PROXY_TOKEN_SECRET,
       },
-      body: Buffer.from(audio),
+      body: audio,
       signal: AbortSignal.timeout(5 * 60_000),
     });
 

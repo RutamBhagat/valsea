@@ -1,9 +1,7 @@
 export type ProviderId = "valsea" | "qwen" | "gemini";
 
 export type TranscriptionInput = {
-  audio: Uint8Array;
-  filename: string;
-  contentType: string;
+  audio: File;
   benchmark?: boolean;
 };
 

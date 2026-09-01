@@ -150,11 +150,13 @@ async function fetchSample(
 
   const audioResponse = await fetchImplementation(audioAsset.src);
   if (!audioResponse.ok) throw new Error(`Audio request failed with HTTP ${audioResponse.status}`);
-  const audio = new Uint8Array(await audioResponse.arrayBuffer());
-  const hash = new Bun.CryptoHasher("sha256").update(audio).digest("hex");
+  const audioBytes = new Uint8Array(await audioResponse.arrayBuffer());
+  const hash = new Bun.CryptoHasher("sha256").update(audioBytes).digest("hex");
   if (hash !== sample.audio_sha256) throw new Error("MERaLiON sample audio hash changed");
 
-  return { audio, contentType: audioAsset.type };
+  return new File([audioBytes], `part4-${sample.row_index.toString().padStart(4, "0")}.wav`, {
+    type: audioAsset.type,
+  });
 }
 
 export async function runBenchmark(
@@ -181,7 +183,7 @@ export async function runBenchmark(
   try {
     for (const sample of selectedSamples) {
       const sampleId = `part4-${sample.row_index.toString().padStart(4, "0")}`;
-      const { audio, contentType } = await fetchSample(sample, fetchImplementation);
+      const audio = await fetchSample(sample, fetchImplementation);
 
       for (const provider of providerIds) {
         const previousStart = lastProviderStart.get(provider);
@@ -195,8 +197,6 @@ export async function runBenchmark(
         try {
           const transcription = await providerRegistry[provider].transcribe({
             audio,
-            filename: `${sampleId}.wav`,
-            contentType,
             benchmark: true,
           });
           const latencyMs = now() - startedAt;
