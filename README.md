@@ -41,9 +41,19 @@ Required server variables are documented in `apps/server/.env.example`. Keep all
 
 ## Backend architecture
 
-The diagram shows the backend request path, external providers, and server deployment flow.
+The diagrams show the application request path, benchmark pipeline, and Modal Qwen service.
+
+### Application backend
 
 ![Valsea backend architecture](docs/architecture.png)
+
+### Benchmark pipeline
+
+![Valsea benchmark architecture](docs/benchmark.png)
+
+### Modal Qwen service
+
+![Valsea Modal Qwen architecture](docs/modal.png)
 
 ## Modal Qwen deployment
 
