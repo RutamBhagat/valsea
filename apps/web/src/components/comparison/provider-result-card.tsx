@@ -40,7 +40,7 @@ export default function ProviderResultCard({
   selectionDisabled: boolean;
   onSelectedChange: (selected: boolean) => void;
 }) {
-  const isPending = pending || run?.status === "pending";
+  const isPending = run ? run.status === "pending" : pending;
   const status = run?.status ?? (pending ? "pending" : comparisonRunId ? "not selected" : null);
   const statusVariant =
     status === "failed" ? "destructive" : status === "succeeded" ? "default" : "secondary";
