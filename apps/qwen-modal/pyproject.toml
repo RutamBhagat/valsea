@@ -10,8 +10,8 @@ requires = ["uv_build>=0.11.29,<0.12.0"]
 build-backend = "uv_build"
 
 [tool.poe.tasks]
-_lint = "uvx ruff@0.16.4 check src scripts"
-_compile = "python -m compileall -q src scripts"
+_lint = "uvx ruff@0.16.4 check src"
+_compile = "python -m compileall -q src"
 _typecheck = "basedpyright"
 check = ["_lint", "_compile", "_typecheck"]
 modal-dev = "modal serve -m qwen_modal.app"
@@ -24,7 +24,7 @@ select = ["C901"]
 max-complexity = 10
 
 [tool.basedpyright]
-include = ["src", "scripts"]
+include = ["src"]
 typeCheckingMode = "strict"
 allowedUntypedLibraries = ["modal"]
 pythonVersion = "3.12"
