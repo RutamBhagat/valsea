@@ -1,4 +1,5 @@
 import { env } from "@valsea/env/server";
+import { ModalClient } from "modal";
 
 import type { TranscriptionProvider } from "./types";
 
@@ -6,24 +7,22 @@ type QwenResponse = {
   text?: unknown;
 };
 
+const modal = new ModalClient({
+  tokenId: env.MODAL_TOKEN_ID,
+  tokenSecret: env.MODAL_TOKEN_SECRET,
+});
+
+const transcriptionMethod = modal.cls
+  .fromName("qwen3-asr", "QwenASR")
+  .then(async (cls) => (await cls.instance()).method("transcribe_remote"));
+
 export const qwen: TranscriptionProvider = {
   transcribe: async ({ audio }) => {
-    const response = await fetch(env.QWEN_MODAL_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": audio.type,
-        "Modal-Key": env.MODAL_PROXY_TOKEN_ID,
-        "Modal-Secret": env.MODAL_PROXY_TOKEN_SECRET,
-      },
-      body: audio,
-      signal: AbortSignal.timeout(5 * 60_000),
-    });
+    const method = await transcriptionMethod;
+    const payload = (await method.remote([
+      new Uint8Array(await audio.arrayBuffer()),
+    ])) as QwenResponse;
 
-    if (!response.ok) {
-      throw new Error(`Qwen Modal request failed with HTTP ${response.status}`);
-    }
-
-    const payload = (await response.json()) as QwenResponse;
     if (typeof payload.text !== "string") {
       throw new Error("Qwen Modal returned an invalid transcription response");
     }

@@ -76,6 +76,15 @@ class QwenASR:
             raise TypeError("Loaded model does not provide transcribe()")
         self.model = model
 
+    @modal.method()
+    async def transcribe_remote(self, audio: bytes) -> dict[str, str]:
+        if not audio:
+            raise ValueError("The WAV audio is empty")
+        if not isinstance(self.model, _ASRModel):
+            raise TypeError("The ASR model is not loaded")
+
+        return await asyncio.to_thread(self._transcribe, self.model, audio)
+
     @modal.fastapi_endpoint(
         method="POST", docs=True, requires_proxy_auth=True
     )

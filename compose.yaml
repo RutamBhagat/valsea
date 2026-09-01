@@ -11,9 +11,8 @@ services:
       GOOGLE_CLIENT_SECRET: secret://google_client_secret
       VALSEA_API_KEY: secret://valsea_api_key
       GEMINI_API_KEY: secret://gemini_api_key
-      QWEN_MODAL_URL: secret://qwen_modal_url
-      MODAL_PROXY_TOKEN_ID: secret://modal_proxy_token_id
-      MODAL_PROXY_TOKEN_SECRET: secret://modal_proxy_token_secret
+      MODAL_TOKEN_ID: secret://modal_token_id
+      MODAL_TOKEN_SECRET: secret://modal_token_secret
     volumes:
       - /var/lib/valsea:/data
     mem_limit: 700m
@@ -51,9 +50,7 @@ secrets:
     x-command: printenv VALSEA_API_KEY
   gemini_api_key:
     x-command: printenv GEMINI_API_KEY
-  qwen_modal_url:
-    x-command: printenv QWEN_MODAL_URL
-  modal_proxy_token_id:
-    x-command: printenv MODAL_PROXY_TOKEN_ID
-  modal_proxy_token_secret:
-    x-command: printenv MODAL_PROXY_TOKEN_SECRET
+  modal_token_id:
+    x-command: printenv MODAL_TOKEN_ID
+  modal_token_secret:
+    x-command: printenv MODAL_TOKEN_SECRET

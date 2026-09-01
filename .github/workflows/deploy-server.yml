@@ -127,9 +127,8 @@ jobs:
           GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
           VALSEA_API_KEY: ${{ secrets.VALSEA_API_KEY }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          QWEN_MODAL_URL: ${{ secrets.QWEN_MODAL_URL }}
-          MODAL_PROXY_TOKEN_ID: ${{ secrets.MODAL_PROXY_TOKEN_ID }}
-          MODAL_PROXY_TOKEN_SECRET: ${{ secrets.MODAL_PROXY_TOKEN_SECRET }}
+          MODAL_TOKEN_ID: ${{ secrets.MODAL_TOKEN_ID }}
+          MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
         run: uc deploy --connect a1 --yes
 
       - name: Keep at most one previous application image
