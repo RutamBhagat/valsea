@@ -31,6 +31,7 @@
         "@valsea/db": "workspace:*",
         "@valsea/env": "workspace:*",
         "better-auth": "catalog:",
+        "bytes": "^3.1.2",
         "dotenv": "catalog:",
         "elysia": "^1.4.29",
         "file-type": "^22.0.2",
@@ -38,6 +39,7 @@
       },
       "devDependencies": {
         "@types/bun": "catalog:",
+        "@types/bytes": "^3.1.6",
         "@valsea/config": "workspace:*",
         "tsdown": "^0.22.14",
         "typescript": "catalog:",
@@ -943,6 +945,8 @@
     "@types/aws-lambda": ["@types/aws-lambda@8.10.162", "", {}, "sha512-Fn658grtLOci1oxi1391vvDWJRKNGWRSqfxRkmN/Iy3c0tQH1USMKEXcPYHLvope+ZgTFocx9FRQJx1muBL6qw=="],
 
     "@types/bun": ["@types/bun@1.4.0", "", { "dependencies": { "bun-types": "1.4.0" } }, "sha512-K+lZULY23vRgK/CfTjFIV+tyifaNdSMlPh9j+6mQ/cLfpOznLyAuzgV/JQysyECpkBQLVMSyvjlr2fBUSA9wFQ=="],
+
+    "@types/bytes": ["@types/bytes@3.1.6", "", {}, "sha512-mZP7MVbCf8q2nBMwll27TyVnObEo9lNuXtQ+XU5EBGiFxtm9qfWm0YL4KTMQBwcVlOZB+th51gFIDYFFBiK7IQ=="],
 
     "@types/chai": ["@types/chai@5.2.3", "", { "dependencies": { "@types/deep-eql": "*", "assertion-error": "^2.0.1" } }, "sha512-Mw558oeA9fFbv65/y4mHtXDs9bPnFMZAL/jxdPFUpOHHIXX91mcgEHbS5Lahr+pwZFR8A7GQleRWeI6cGFC2UA=="],
 

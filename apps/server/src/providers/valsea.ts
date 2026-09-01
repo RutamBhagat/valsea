@@ -9,7 +9,7 @@ const client = new OpenAI({
 });
 
 export const valsea: TranscriptionProvider = {
-  async transcribe({ audio, filename, contentType, benchmark }) {
+  transcribe: async ({ audio, filename, contentType, benchmark }) => {
     const result = await client.audio.transcriptions.create(
       {
         file: await toFile(audio, filename, { type: contentType }),

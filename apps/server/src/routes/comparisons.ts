@@ -1,12 +1,13 @@
 import { db, eq } from "@valsea/db";
 import { comparisonRun, providerRun } from "@valsea/db/schema/index";
+import bytes from "bytes";
 import { Elysia, t } from "elysia";
 import { fileTypeFromBlob } from "file-type";
 
 import { providers } from "../providers";
 import type { ProviderId, TranscriptionProvider } from "../providers/types";
 
-const maxAudioSizeBytes = 10_000_000;
+const maxAudioSizeBytes = bytes.parse("10 MB")!; // current valsea limit
 
 const supportedAudioTypes = new Map([
   ["audio/flac", "audio/flac"],
@@ -102,10 +103,15 @@ export async function createComparison(
 export const comparisonRoutes = new Elysia()
   .post(
     "/comparisons",
-    async ({ body: { audio: uploadedAudio, providers: selectedProviders }, status }) => {
+    async ({
+      body: { audio: uploadedAudio, providers: selectedProviders },
+      status,
+    }) => {
       const detectedType = await fileTypeFromBlob(uploadedAudio);
 
-      const contentType = detectedType ? supportedAudioTypes.get(detectedType.mime) : undefined;
+      const contentType = detectedType
+        ? supportedAudioTypes.get(detectedType.mime)
+        : undefined;
 
       if (!contentType) {
         return status(422, {

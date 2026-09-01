@@ -7,7 +7,7 @@ interface QwenResponse {
 }
 
 export const qwen: TranscriptionProvider = {
-  async transcribe({ audio, contentType }) {
+  transcribe: async ({ audio, contentType }) => {
     const response = await fetch(env.QWEN_MODAL_URL, {
       method: "POST",
       headers: {

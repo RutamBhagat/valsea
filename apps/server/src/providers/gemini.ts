@@ -6,7 +6,7 @@ import type { TranscriptionProvider } from "./types";
 const model = "gemini-3.5-transcribe";
 
 export const gemini: TranscriptionProvider = {
-  async transcribe({ audio, contentType }) {
+  transcribe: async ({ audio, contentType }) => {
     const client = new GoogleGenAI({
       apiKey: env.GEMINI_API_KEY,
       httpOptions: { timeout: 2 * 60_000 },
