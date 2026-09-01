@@ -12,13 +12,17 @@ const modal = new ModalClient({
   tokenSecret: env.MODAL_TOKEN_SECRET,
 });
 
-const transcriptionMethod = modal.cls
-  .fromName("qwen3-asr", "QwenASR")
-  .then(async (cls) => (await cls.instance()).method("transcribe_remote"));
+const createTranscriptionMethod = () =>
+  modal.cls
+    .fromName("qwen3-asr", "QwenASR")
+    .then(async (cls) => (await cls.instance()).method("transcribe_remote"));
+
+let transcriptionMethod: ReturnType<typeof createTranscriptionMethod> | undefined;
+const getTranscriptionMethod = () => (transcriptionMethod ??= createTranscriptionMethod());
 
 export const qwen: TranscriptionProvider = {
   transcribe: async ({ audio }) => {
-    const method = await transcriptionMethod;
+    const method = await getTranscriptionMethod();
     const payload = (await method.remote([
       new Uint8Array(await audio.arrayBuffer()),
     ])) as QwenResponse;
