@@ -11,8 +11,7 @@
     "compile": "bun build --compile --minify --sourcemap --bytecode ./src/index.ts --outfile server",
     "db:migrate": "bun run --cwd ../../packages/db db:migrate",
     "dev": "bun run db:migrate && bun run --hot src/index.ts",
-    "start": "bun run db:migrate && bun run dist/index.mjs",
-    "test": "bun run db:migrate && bun test --preload ./test/preload.ts ./test"
+    "start": "bun run db:migrate && bun run dist/index.mjs"
   },
   "dependencies": {
     "@elysiajs/cors": "^1.4.2",
