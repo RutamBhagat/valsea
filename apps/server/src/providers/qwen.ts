@@ -24,7 +24,7 @@ export const qwen: TranscriptionProvider = {
   transcribe: async ({ audio }) => {
     const method = await getTranscriptionMethod();
     const payload = (await method.remote([
-      { audio: new Uint8Array(await audio.arrayBuffer()) },
+      new Uint8Array(await audio.arrayBuffer()),
     ])) as QwenResponse;
 
     if (typeof payload.text !== "string") {
