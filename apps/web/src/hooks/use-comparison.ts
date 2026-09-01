@@ -23,6 +23,8 @@ export function useComparison() {
 
       return data;
     },
+    refetchInterval: (query) =>
+      query.state.data?.providerRuns.some((run) => run.status === "pending") ? 1_000 : false,
     retry: 1,
   });
 
@@ -49,12 +51,17 @@ export function useComparison() {
   });
 
   const requestError = createComparison.error ?? comparisonQuery.error;
+  const hasPendingRuns =
+    comparisonQuery.data?.providerRuns.some((run) => run.status === "pending") ?? false;
+  const isRunning =
+    createComparison.isPending ||
+    (comparisonRunId !== null && (comparisonQuery.isPending || hasPendingRuns));
 
   return {
     comparisonRunId,
     comparison: comparisonQuery.data ?? null,
     startComparison: createComparison.mutate,
-    isSubmitting: createComparison.isPending,
+    isSubmitting: isRunning,
     requestError: requestError ? getApiErrorMessage(requestError) : null,
   };
 }

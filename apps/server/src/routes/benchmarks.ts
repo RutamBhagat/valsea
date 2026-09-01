@@ -99,9 +99,11 @@ export function getHistory(userId: string) {
     return {
       id: comparison.id,
       type: "comparison" as const,
-      status: runs.every((run) => run.status === "succeeded")
-        ? ("succeeded" as const)
-        : ("failed" as const),
+      status: runs.some((run) => run.status === "pending")
+        ? ("running" as const)
+        : runs.every((run) => run.status === "succeeded")
+          ? ("succeeded" as const)
+          : ("failed" as const),
       createdAt: comparison.createdAt,
       filename: comparison.filename,
       providerCount: runs.length,

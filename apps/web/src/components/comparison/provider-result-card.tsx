@@ -13,7 +13,7 @@ import { AudioLinesIcon, CheckIcon, Clock3Icon, LoaderCircleIcon } from "lucide-
 
 export type ProviderRunView = {
   provider: "valsea" | "qwen" | "gemini";
-  status: "succeeded" | "failed";
+  status: "pending" | "succeeded" | "failed";
   transcript: string | null;
   latencyMs: number | null;
   error: string | null;
@@ -40,7 +40,8 @@ export default function ProviderResultCard({
   selectionDisabled: boolean;
   onSelectedChange: (selected: boolean) => void;
 }) {
-  const status = run?.status ?? (pending ? "running" : comparisonRunId ? "not selected" : null);
+  const isPending = pending || run?.status === "pending";
+  const status = run?.status ?? (pending ? "pending" : comparisonRunId ? "not selected" : null);
   const statusVariant =
     status === "failed" ? "destructive" : status === "succeeded" ? "default" : "secondary";
 
@@ -55,7 +56,7 @@ export default function ProviderResultCard({
         <CardAction className="flex items-center gap-2">
           {status ? (
             <Badge variant={statusVariant}>
-              {pending ? (
+              {isPending ? (
                 <LoaderCircleIcon data-icon="inline-start" className="animate-spin" />
               ) : null}
               {status}
@@ -70,7 +71,7 @@ export default function ProviderResultCard({
         </CardAction>
       </CardHeader>
       <CardContent className="flex flex-1 flex-col gap-4 pt-1">
-        {pending ? (
+        {isPending ? (
           <div className="flex flex-col gap-3" aria-label={`${name} is transcribing`}>
             <Skeleton className="h-3 w-4/5" />
             <Skeleton className="h-3 w-full" />

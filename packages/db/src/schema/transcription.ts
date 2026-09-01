@@ -4,7 +4,7 @@ import { index, integer, primaryKey, sqliteTable, text } from "drizzle-orm/sqlit
 import { user } from "./auth";
 
 const providers = ["valsea", "qwen", "gemini"] as const;
-const providerRunStatuses = ["succeeded", "failed"] as const;
+const providerRunStatuses = ["pending", "succeeded", "failed"] as const;
 const timestamp = () => integer({ mode: "timestamp_ms" });
 const now = sql`(cast(unixepoch('subsecond') * 1000 as integer))`;
 
@@ -30,7 +30,7 @@ export const providerRun = sqliteTable(
     provider: text({ enum: providers }).notNull(),
     status: text({ enum: providerRunStatuses }).notNull(),
     transcript: text(),
-    latencyMs: integer().notNull(),
+    latencyMs: integer(),
     error: text(),
   },
   (table) => [primaryKey({ columns: [table.comparisonRunId, table.provider] })],

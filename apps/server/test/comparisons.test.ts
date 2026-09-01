@@ -43,6 +43,20 @@ function sampleAudio() {
   });
 }
 
+async function waitForProviderRuns(comparisonRunId: string) {
+  for (let attempt = 0; attempt < 100; attempt += 1) {
+    const rows = db
+      .select()
+      .from(providerRun)
+      .where(eq(providerRun.comparisonRunId, comparisonRunId))
+      .all();
+    if (rows.length > 0 && rows.every((row) => row.status !== "pending")) return rows;
+    await Bun.sleep(5);
+  }
+
+  throw new Error("Provider runs did not finish");
+}
+
 test.serial("selected providers run and persist their final results", async () => {
   const registry = providerRegistry();
   const audio = sampleAudio();
@@ -54,6 +68,7 @@ test.serial("selected providers run and persist their final results", async () =
     dependencies: { providers: registry },
   });
 
+  await waitForProviderRuns(comparisonRunId);
   const rows = db
     .select({
       provider: providerRun.provider,
@@ -84,20 +99,26 @@ test.serial("selected providers start concurrently", async () => {
     gemini: { transcribe: geminiTranscribe },
   });
 
-  const comparison = createComparison({
+  const { comparisonRunId } = await createComparison({
     userId: USER_ID,
     uploadedAudio: sampleAudio(),
     selectedProviders: ["valsea", "gemini"],
     dependencies: { providers: registry },
   });
-  await Bun.sleep(0);
 
   expect(valseaTranscribe).toHaveBeenCalledTimes(1);
   expect(geminiTranscribe).toHaveBeenCalledTimes(1);
+  expect(
+    db
+      .select({ status: providerRun.status })
+      .from(providerRun)
+      .where(eq(providerRun.comparisonRunId, comparisonRunId))
+      .all(),
+  ).toEqual([{ status: "pending" }, { status: "pending" }]);
 
   valseaResult.resolve({ text: "valsea result" });
   geminiResult.resolve({ text: "gemini result" });
-  await comparison;
+  await waitForProviderRuns(comparisonRunId);
 });
 
 test.serial("one provider failure leaves another provider result intact", async () => {
@@ -119,6 +140,7 @@ test.serial("one provider failure leaves another provider result intact", async 
     dependencies: { providers: registry },
   });
 
+  await waitForProviderRuns(comparisonRunId);
   const rows = db
     .select({
       provider: providerRun.provider,

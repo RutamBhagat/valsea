@@ -25,57 +25,6 @@ export async function createComparison({
 }: CreateComparisonInput) {
   const comparisonRunId = crypto.randomUUID();
 
-  const providerRunRows = await Promise.all(
-    selectedProviders.map(async (provider) => {
-      const providerStartedAt = performance.now();
-
-      try {
-        const result = await dependencies.providers[provider].transcribe({
-          audio: uploadedAudio,
-        });
-        const latencyMs = Math.round(performance.now() - providerStartedAt);
-
-        console.info(
-          JSON.stringify({
-            comparisonRunId,
-            provider,
-            status: "succeeded",
-            latencyMs,
-          }),
-        );
-
-        return {
-          comparisonRunId,
-          provider,
-          status: "succeeded" as const,
-          transcript: result.text,
-          latencyMs,
-          error: null,
-        };
-      } catch {
-        const latencyMs = Math.round(performance.now() - providerStartedAt);
-
-        console.error(
-          JSON.stringify({
-            comparisonRunId,
-            provider,
-            status: "failed",
-            latencyMs,
-          }),
-        );
-
-        return {
-          comparisonRunId,
-          provider,
-          status: "failed" as const,
-          transcript: null,
-          latencyMs,
-          error: "Transcription failed",
-        };
-      }
-    }),
-  );
-
   db.transaction((tx) => {
     tx.insert(comparisonRun)
       .values({
@@ -86,7 +35,80 @@ export async function createComparison({
         sizeBytes: uploadedAudio.size,
       })
       .run();
-    tx.insert(providerRun).values(providerRunRows).run();
+    tx.insert(providerRun)
+      .values(
+        selectedProviders.map((provider) => ({
+          comparisonRunId,
+          provider,
+          status: "pending" as const,
+        })),
+      )
+      .run();
+  });
+
+  queueMicrotask(() => {
+    void Promise.allSettled(
+      selectedProviders.map(async (provider) => {
+        const providerStartedAt = performance.now();
+
+        try {
+          const result = await dependencies.providers[provider].transcribe({
+            audio: uploadedAudio,
+          });
+          const latencyMs = Math.round(performance.now() - providerStartedAt);
+
+          db.update(providerRun)
+            .set({
+              status: "succeeded",
+              transcript: result.text,
+              latencyMs,
+              error: null,
+            })
+            .where(
+              and(
+                eq(providerRun.comparisonRunId, comparisonRunId),
+                eq(providerRun.provider, provider),
+              ),
+            )
+            .run();
+
+          console.info(
+            JSON.stringify({
+              comparisonRunId,
+              provider,
+              status: "succeeded",
+              latencyMs,
+            }),
+          );
+        } catch {
+          const latencyMs = Math.round(performance.now() - providerStartedAt);
+
+          db.update(providerRun)
+            .set({
+              status: "failed",
+              transcript: null,
+              latencyMs,
+              error: "Transcription failed",
+            })
+            .where(
+              and(
+                eq(providerRun.comparisonRunId, comparisonRunId),
+                eq(providerRun.provider, provider),
+              ),
+            )
+            .run();
+
+          console.error(
+            JSON.stringify({
+              comparisonRunId,
+              provider,
+              status: "failed",
+              latencyMs,
+            }),
+          );
+        }
+      }),
+    );
   });
 
   return { comparisonRunId };
