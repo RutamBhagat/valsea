@@ -75,96 +75,97 @@ export async function runBenchmark(benchmarkRunId: string) {
         type: audioAsset.type,
       });
 
-      for (const provider of providerIds) {
-        const previousStart = lastProviderStart.get(provider);
-        if (provider === "gemini" && previousStart !== undefined) {
-          await Bun.sleep(Math.max(0, 21_000 - (performance.now() - previousStart)));
-        }
-
-        lastProviderStart.set(provider, performance.now());
-        const startedAt = performance.now();
-        let providerResult: BenchmarkProviderResult;
-
-        try {
-          const transcription = await providers[provider].transcribe({ audio, benchmark: true });
-          const referenceTokens =
-            reference
-              .replace(speakerTagPattern, " ")
-              .normalize("NFKC")
-              .toLowerCase()
-              .match(tokenPattern) ?? [];
-          const predictionTokens =
-            transcription.text
-              .replace(speakerTagPattern, " ")
-              .normalize("NFKC")
-              .toLowerCase()
-              .match(tokenPattern) ?? [];
-          let previousDistances = Array.from(
-            { length: predictionTokens.length + 1 },
-            (_, index) => index,
-          );
-
-          for (
-            let referenceIndex = 1;
-            referenceIndex <= referenceTokens.length;
-            referenceIndex += 1
-          ) {
-            const currentDistances = [referenceIndex];
-
-            for (
-              let predictionIndex = 1;
-              predictionIndex <= predictionTokens.length;
-              predictionIndex += 1
-            ) {
-              currentDistances.push(
-                Math.min(
-                  currentDistances[predictionIndex - 1]! + 1,
-                  previousDistances[predictionIndex]! + 1,
-                  previousDistances[predictionIndex - 1]! +
-                    (referenceTokens[referenceIndex - 1] === predictionTokens[predictionIndex - 1]
-                      ? 0
-                      : 1),
-                ),
-              );
-            }
-
-            previousDistances = currentDistances;
+      const providerResults = await Promise.all(
+        providerIds.map(async (provider): Promise<BenchmarkProviderResult> => {
+          const previousStart = lastProviderStart.get(provider);
+          if (provider === "gemini" && previousStart !== undefined) {
+            await Bun.sleep(Math.max(0, 21_000 - (performance.now() - previousStart)));
           }
 
-          const edits = previousDistances[predictionTokens.length]!;
-          providerResult = {
-            provider,
-            sampleId,
-            reference,
-            prediction: transcription.text,
-            latencyMs: performance.now() - startedAt,
-            errorRate: edits / referenceTokens.length,
-            error: null,
-            edits,
-            referenceTokens: referenceTokens.length,
-          };
-        } catch (error) {
-          providerResult = {
-            provider,
-            sampleId,
-            reference,
-            prediction: null,
-            latencyMs: performance.now() - startedAt,
-            errorRate: null,
-            error: error instanceof Error ? error.message : "Transcription failed",
-            edits: null,
-            referenceTokens: null,
-          };
-        }
+          lastProviderStart.set(provider, performance.now());
+          const startedAt = performance.now();
 
-        resultJson.providerResults.push(providerResult);
-        resultJson.requestProgress.completed += 1;
+          try {
+            const transcription = await providers[provider].transcribe({ audio, benchmark: true });
+            const referenceTokens =
+              reference
+                .replace(speakerTagPattern, " ")
+                .normalize("NFKC")
+                .toLowerCase()
+                .match(tokenPattern) ?? [];
+            const predictionTokens =
+              transcription.text
+                .replace(speakerTagPattern, " ")
+                .normalize("NFKC")
+                .toLowerCase()
+                .match(tokenPattern) ?? [];
+            let previousDistances = Array.from(
+              { length: predictionTokens.length + 1 },
+              (_, index) => index,
+            );
 
-        db.update(benchmarkRun)
-          .set({ status: "running", resultJson, updatedAt: new Date() })
-          .where(eq(benchmarkRun.id, benchmarkRunId))
-          .run();
-      }
+            for (
+              let referenceIndex = 1;
+              referenceIndex <= referenceTokens.length;
+              referenceIndex += 1
+            ) {
+              const currentDistances = [referenceIndex];
+
+              for (
+                let predictionIndex = 1;
+                predictionIndex <= predictionTokens.length;
+                predictionIndex += 1
+              ) {
+                currentDistances.push(
+                  Math.min(
+                    currentDistances[predictionIndex - 1]! + 1,
+                    previousDistances[predictionIndex]! + 1,
+                    previousDistances[predictionIndex - 1]! +
+                      (referenceTokens[referenceIndex - 1] === predictionTokens[predictionIndex - 1]
+                        ? 0
+                        : 1),
+                  ),
+                );
+              }
+
+              previousDistances = currentDistances;
+            }
+
+            const edits = previousDistances[predictionTokens.length]!;
+            return {
+              provider,
+              sampleId,
+              reference,
+              prediction: transcription.text,
+              latencyMs: performance.now() - startedAt,
+              errorRate: edits / referenceTokens.length,
+              error: null,
+              edits,
+              referenceTokens: referenceTokens.length,
+            };
+          } catch (error) {
+            return {
+              provider,
+              sampleId,
+              reference,
+              prediction: null,
+              latencyMs: performance.now() - startedAt,
+              errorRate: null,
+              error: error instanceof Error ? error.message : "Transcription failed",
+              edits: null,
+              referenceTokens: null,
+            };
+          }
+        }),
+      );
+
+      resultJson.providerResults.push(...providerResults);
+      resultJson.requestProgress.completed += providerResults.length;
+
+      db.update(benchmarkRun)
+        .set({ status: "running", resultJson, updatedAt: new Date() })
+        .where(eq(benchmarkRun.id, benchmarkRunId))
+        .run();
     }
 
     resultJson.summary = providerIds.map((providerId) => {
