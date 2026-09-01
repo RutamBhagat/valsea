@@ -1,7 +1,7 @@
 import asyncio
 from importlib import import_module
 from tempfile import NamedTemporaryFile
-from typing import Protocol, runtime_checkable
+from typing import Protocol, TypedDict, runtime_checkable
 
 import modal
 
@@ -10,11 +10,20 @@ class _Transcription(Protocol):
     text: str
 
 
+class _TranscriptionRequest(TypedDict):
+    audio: bytes
+
+
 @runtime_checkable
 class _ASRModel(Protocol):
     def transcribe(
         self, *, audio: str, language: str | None
     ) -> list[_Transcription]: ...
+
+
+class _TranscriptionParams(TypedDict):
+    model: _ASRModel
+    audio: bytes
 
 
 @runtime_checkable
@@ -74,20 +83,25 @@ class QwenASR:
         self.model = model
 
     @modal.method()
-    async def transcribe_remote(self, audio: bytes) -> dict[str, str]:
-        if not audio:
+    async def transcribe_remote(
+        self, request: _TranscriptionRequest
+    ) -> dict[str, str]:
+        if not request["audio"]:
             raise ValueError("The WAV audio is empty")
         if not isinstance(self.model, _ASRModel):
             raise TypeError("The ASR model is not loaded")
 
-        return await asyncio.to_thread(self._transcribe, self.model, audio)
+        params = _TranscriptionParams(model=self.model, audio=request["audio"])
+        return await asyncio.to_thread(self._transcribe, params)
 
     @staticmethod
-    def _transcribe(model: _ASRModel, audio: bytes) -> dict[str, str]:
+    def _transcribe(params: _TranscriptionParams) -> dict[str, str]:
         with NamedTemporaryFile(suffix=".wav") as audio_file:
-            audio_file.write(audio)
+            audio_file.write(params["audio"])
             audio_file.flush()
-            results = model.transcribe(audio=audio_file.name, language=None)
+            results = params["model"].transcribe(
+                audio=audio_file.name, language=None
+            )
 
         if not results:
             raise RuntimeError("The ASR model returned no transcription")
